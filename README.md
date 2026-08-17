@@ -1,5 +1,10 @@
 # Entra ID SecOps MCP Server
 
+[![CI](https://github.com/Sultan-zd/mcp-entra-secops/actions/workflows/ci.yml/badge.svg)](https://github.com/Sultan-zd/mcp-entra-secops/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
+![MCP](https://img.shields.io/badge/MCP-2026--07--28-brightgreen)
+![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)
+
 Serveur [MCP](https://modelcontextprotocol.io) qui expose les journaux de sécurité
 de **Microsoft Entra ID** comme outils exécutables par un agent IA (Claude Desktop,
 Cursor, ou tout autre client MCP).
@@ -7,6 +12,10 @@ Cursor, ou tout autre client MCP).
 Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
 quelques secondes une réponse fondée sur les données réelles du tenant.
+
+> 📖 **[Guide d'installation et de test](docs/SETUP.md)** — les trois façons de
+> lancer le serveur, pas à pas.
+> 🔍 **[Brief technique](docs/RESEARCH.md)** — scan du marché et exposition sécurisée.
 
 ## Principe de conception
 
@@ -96,13 +105,39 @@ ENTRA_DATA_SOURCE=graph
 
 Toutes les variables sont documentées dans [`.env.example`](.env.example).
 
+## Docker
+
+```bash
+docker build -t entra-secops-mcp .
+docker run -i --rm --env-file .env entra-secops-mcp
+```
+
+Image finale : **277 Mo**, construction multi-étapes, exécution en utilisateur
+non root (`uid=1000`), **aucun secret dans les couches**.
+
+`-i` garde l'entrée standard ouverte — c'est par là que passe le protocole MCP.
+**Pas de `-t`** : un pseudo-terminal injecte des codes de couleur qui corrompent
+les trames JSON.
+
 ## Développement
 
 ```bash
-pytest          # tests
-ruff check .    # lint
-mypy src        # types
+pytest              # 81 tests
+ruff check src tests
+mypy src            # mode strict
+pre-commit install  # contrôles avant chaque commit
+python demo.py      # investigation de démonstration
 ```
+
+## État
+
+| | |
+|---|---|
+| Outils | 6, tous en lecture seule |
+| Tests | 81, sans tenant Azure requis |
+| Types | `mypy --strict` sans alerte |
+| Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
+| Conteneur | vérifié via un vrai client MCP : démarrage 2,4 s, appel d'outil ~110 ms |
 
 ## Licence
 
