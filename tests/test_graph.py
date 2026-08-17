@@ -212,6 +212,59 @@ async def test_403_explique_la_permission_manquante(
     assert "Authorization_RequestDenied" in message
 
 
+@pytest.mark.parametrize(
+    ("code", "message"),
+    [
+        (
+            "Authentication_RequestFromNonPremiumTenantOrB2CTenant",
+            "Tenant is not a B2C tenant and doesn't have premium license",
+        ),
+        ("Forbidden", "Your tenant is not licensed for this feature."),
+    ],
+)
+async def test_403_de_licence_distingue_du_403_de_permission(
+    http_client: HttpGraphClient, respx_mock: respx.MockRouter, code: str, message: str
+) -> None:
+    """Graph renvoie 403 pour une licence absente comme pour une permission absente.
+
+    Les confondre envoie l'analyste chercher une permission qui, elle, est bien
+    accordée. Cas rencontré en conditions réelles sur un tenant sans P1/P2.
+    """
+    respx_mock.get(SIGNINS_URL).mock(
+        return_value=httpx.Response(403, json={"error": {"code": code, "message": message}})
+    )
+
+    with pytest.raises(GraphError) as err:
+        await http_client.get(SIGNINS_PATH)
+
+    texte = str(err.value)
+    assert "Licence Entra ID insuffisante" in texte
+    assert "P1" in texte and "P2" in texte
+    assert "consentement administrateur" not in texte
+
+
+async def test_403_de_permission_reste_un_message_de_permission(
+    http_client: HttpGraphClient, respx_mock: respx.MockRouter
+) -> None:
+    respx_mock.get(SIGNINS_URL).mock(
+        return_value=httpx.Response(
+            403,
+            json={
+                "error": {
+                    "code": "Authorization_RequestDenied",
+                    "message": "Insufficient privileges to complete the operation.",
+                }
+            },
+        )
+    )
+
+    with pytest.raises(GraphError) as err:
+        await http_client.get(SIGNINS_PATH)
+
+    assert "consentement administrateur" in str(err.value)
+    assert "Licence" not in str(err.value)
+
+
 async def test_401_designe_le_secret_expire(
     http_client: HttpGraphClient, respx_mock: respx.MockRouter
 ) -> None:

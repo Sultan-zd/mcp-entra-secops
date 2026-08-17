@@ -195,6 +195,17 @@ class HttpGraphClient(GraphClient):
                 "probablement expiré ou révoqué."
             )
         if response.status_code == 403:
+            # Graph renvoie 403 aussi bien pour une permission manquante que
+            # pour une licence absente. Les deux se corrigent à des endroits
+            # différents : confondre les deux fait perdre des heures à chercher
+            # une permission qui, elle, est bien accordée.
+            if _is_licence_error(code, message):
+                return GraphError(
+                    "Licence Entra ID insuffisante (403). Les permissions sont accordées, "
+                    "mais le tenant ne dispose pas de la licence requise : Entra ID P1 pour "
+                    "les journaux de connexion, P2 pour Identity Protection. "
+                    f"Détail Graph : {code} {message}"
+                )
             return GraphError(
                 "Permission insuffisante (403). L'application Entra n'a pas la permission "
                 "applicative requise, ou le consentement administrateur n'a pas été accordé. "
@@ -408,6 +419,22 @@ def _rebase_to_now(
                 shifted = datetime.fromisoformat(str(record[field])) + offset
                 record[field] = shifted.strftime("%Y-%m-%dT%H:%M:%SZ")
     return records
+
+
+#: Marqueurs par lesquels Graph signale une licence manquante plutôt qu'une
+#: permission manquante, alors qu'il renvoie 403 dans les deux cas.
+_LICENCE_MARKERS = (
+    "requestfromnonpremiumtenant",
+    "not licensed",
+    "premium license",
+    "premium licence",
+)
+
+
+def _is_licence_error(code: str, message: str) -> bool:
+    """Distingue un 403 de licence d'un 403 de permission."""
+    haystack = f"{code} {message}".lower()
+    return any(marker in haystack for marker in _LICENCE_MARKERS)
 
 
 def _retry_after_seconds(response: httpx.Response) -> float | None:
