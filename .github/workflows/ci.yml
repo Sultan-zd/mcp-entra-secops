@@ -108,7 +108,7 @@ jobs:
       # Rapport complet, non bloquant : il documente ce qui a été trouvé, y
       # compris les vulnérabilités sans correctif disponible en amont.
       - name: Inventaire des vulnérabilités (rapport)
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         env:
           # Le dépôt par défaut (ghcr.io) limite les tirages non authentifiés,
           # ce qui fait échouer l'étape pour une raison sans rapport avec la
@@ -127,7 +127,7 @@ jobs:
       # Une CI durablement rouge finit par être ignorée — elle protège alors
       # moins bien qu'un seuil plus étroit mais respecté.
       - name: Garde-fou vulnérabilités critiques
-        uses: aquasecurity/trivy-action@0.36.0
+        uses: aquasecurity/trivy-action@v0.36.0
         env:
           TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2
         with:
