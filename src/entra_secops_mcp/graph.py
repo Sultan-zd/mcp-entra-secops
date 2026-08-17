@@ -16,7 +16,7 @@ import asyncio
 import json
 import logging
 import re
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from importlib import resources
 from typing import Any
 
@@ -30,20 +30,45 @@ logger = logging.getLogger(__name__)
 #: ou incident transitoire côté Microsoft.
 _RETRYABLE_STATUS = {429, 500, 502, 503, 504}
 
-#: Correspondance entre un chemin Graph et le fichier de démonstration associé.
+#: Correspondance entre un chemin Graph, le fichier de démonstration associé, et
+#: les champs à recaler dans le temps.
+#:
 #: Un motif peut capturer un segment d'URL (l'identifiant d'un utilisateur, par
 #: exemple) ; les enregistrements du fichier sont alors restreints à ceux dont
 #: le champ `_scope` vaut ce segment. C'est ce qui permet de simuler des
 #: endpoints paramétrés comme /users/{id}/memberOf.
-_FIXTURE_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
-    (re.compile(r"^/auditLogs/signIns$"), "signins.json"),
-    (re.compile(r"^/auditLogs/directoryAudits$"), "directory_audits.json"),
-    (re.compile(r"^/identityProtection/riskyUsers$"), "risky_users.json"),
-    (re.compile(r"^/identityProtection/riskDetections$"), "risk_detections.json"),
-    (re.compile(r"^/identity/conditionalAccess/policies$"), "conditional_access.json"),
-    (re.compile(r"^/users$"), "users.json"),
-    (re.compile(r"^/users/([^/]+)/memberOf$"), "member_of.json"),
+#:
+#: Le troisième élément liste les champs d'ÉVÉNEMENT, seuls concernés par le
+#: recalage. La distinction est essentielle : `createdDateTime` désigne l'heure
+#: d'une connexion sur /auditLogs/signIns, mais la date de création d'un compte
+#: sur /users. Recaler la seconde ferait apparaître tous les comptes comme
+#: créés il y a quelques mois — et un analyste en tirerait des conclusions.
+_FIXTURE_PATTERNS: tuple[tuple[re.Pattern[str], str, tuple[str, ...]], ...] = (
+    (re.compile(r"^/auditLogs/signIns$"), "signins.json", ("createdDateTime",)),
+    (re.compile(r"^/auditLogs/directoryAudits$"), "directory_audits.json", ("activityDateTime",)),
+    (
+        re.compile(r"^/identityProtection/riskyUsers$"),
+        "risky_users.json",
+        ("riskLastUpdatedDateTime",),
+    ),
+    (
+        re.compile(r"^/identityProtection/riskDetections$"),
+        "risk_detections.json",
+        ("activityDateTime", "detectedDateTime"),
+    ),
+    # Les dates de politique et de création de compte décrivent la configuration
+    # du tenant, pas l'incident : elles restent telles quelles.
+    (re.compile(r"^/identity/conditionalAccess/policies$"), "conditional_access.json", ()),
+    (re.compile(r"^/users$"), "users.json", ()),
+    (re.compile(r"^/users/([^/]+)/memberOf$"), "member_of.json", ()),
 )
+
+#: Dernier événement du scénario de démonstration, tous fichiers confondus.
+#: Le décalage temporel est calculé UNE fois à partir de cette ancre, puis
+#: appliqué identiquement partout. Un décalage calculé fichier par fichier
+#: désynchroniserait les outils entre eux et détruirait la chronologie de
+#: l'incident — précisément ce que la démonstration doit montrer.
+_SCENARIO_ANCHOR = datetime(2026, 8, 17, 7, 2, 15, tzinfo=UTC)
 
 
 class GraphError(RuntimeError):
@@ -257,7 +282,7 @@ class FixtureGraphClient(GraphClient):
         self._settings = settings
 
     def _load(self, path: str) -> list[dict[str, Any]]:
-        for pattern, filename in _FIXTURE_PATTERNS:
+        for pattern, filename, time_fields in _FIXTURE_PATTERNS:
             found = pattern.match(path)
             if found is None:
                 continue
@@ -272,7 +297,7 @@ class FixtureGraphClient(GraphClient):
                 scope = found.group(1)
                 records = [r for r in records if r.get("_scope") == scope]
 
-            return _rebase_to_now(records)
+            return _rebase_to_now(records, time_fields)
 
         raise GraphError(
             f"Aucune donnée de démonstration pour l'endpoint « {path} ». "
@@ -348,36 +373,37 @@ class FixtureGraphClient(GraphClient):
         return None
 
 
-#: Champs horodatés que le décalage des fixtures doit ajuster.
-_TIME_FIELDS = (
-    "createdDateTime",
-    "activityDateTime",
-    "detectedDateTime",
-    "riskLastUpdatedDateTime",
-    "modifiedDateTime",
-)
+def _scenario_offset() -> timedelta:
+    """Écart entre l'instant présent et la fin du scénario de démonstration.
 
-
-def _rebase_to_now(records: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Décale les horodatages pour que l'événement le plus récent tombe « maintenant ».
-
-    Sans cela, une fixture datée du jour de sa création cesserait d'apparaître
-    dans une fenêtre de 24 h dès le lendemain, et les démonstrations
-    cesseraient de fonctionner. Les écarts relatifs entre événements sont
-    préservés : la chronologie de l'incident reste intacte.
+    Calculé à partir d'une ancre unique et fixe, donc identique pour tous les
+    fichiers de démonstration : la chronologie relative entre les connexions,
+    les détections de risque et les audits d'annuaire est préservée à la
+    seconde près.
     """
-    stamps = [
-        datetime.fromisoformat(str(record[field]))
-        for record in records
-        for field in _TIME_FIELDS
-        if record.get(field)
-    ]
-    if not stamps:
+    return datetime.now(UTC) - _SCENARIO_ANCHOR
+
+
+def _rebase_to_now(
+    records: list[dict[str, Any]], time_fields: tuple[str, ...]
+) -> list[dict[str, Any]]:
+    """Décale les horodatages d'événement pour que le scénario se termine « maintenant ».
+
+    Sans ce décalage, une fixture datée du jour de sa création cesserait
+    d'apparaître dans une fenêtre de 24 h dès le lendemain, et les
+    démonstrations cesseraient de fonctionner.
+
+    Seuls les champs listés dans `time_fields` sont décalés. Les dates qui
+    décrivent la configuration du tenant — création d'un compte, modification
+    d'une politique — restent intactes : les décaler inventerait des
+    coïncidences que l'analyste interpréterait comme des indices.
+    """
+    if not time_fields:
         return records
 
-    offset = datetime.now(UTC) - max(stamps)
+    offset = _scenario_offset()
     for record in records:
-        for field in _TIME_FIELDS:
+        for field in time_fields:
             if record.get(field):
                 shifted = datetime.fromisoformat(str(record[field])) + offset
                 record[field] = shifted.strftime("%Y-%m-%dT%H:%M:%SZ")

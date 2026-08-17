@@ -8,7 +8,7 @@
       "userDisplayName": "Compte Marketing",
       "riskLevel": "high",
       "riskState": "atRisk",
-      "riskDetail": "userPerformedSecuredPasswordReset",
+      "riskDetail": "none",
       "isDeleted": false,
       "isProcessing": false,
       "riskLastUpdatedDateTime": "2026-08-17T06:16:40Z"

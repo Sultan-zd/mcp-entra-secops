@@ -267,6 +267,63 @@ async def test_fixture_horodatages_recales_sur_maintenant(fixture_settings: Sett
     assert max(stamps) > datetime.now(UTC) - timedelta(minutes=5)
 
 
+async def test_date_de_creation_de_compte_jamais_decalee(fixture_settings: Settings) -> None:
+    """`createdDateTime` sur /users est une date de création, pas un événement.
+
+    Le décaler faisait apparaître un compte créé en 2024 comme créé quelques
+    mois plus tôt — et un analyste en tirait une conclusion sur l'ancienneté
+    du compte.
+    """
+    client = FixtureGraphClient(fixture_settings)
+
+    users = await client.get(
+        "/users", params={"$filter": "userPrincipalName eq 'marketing@teknologiia.com'"}
+    )
+
+    assert users[0]["createdDateTime"] == "2024-09-02T08:30:00Z"
+
+
+async def test_dates_de_politique_jamais_decalees(fixture_settings: Settings) -> None:
+    """Une politique modifiée il y a des mois ne doit pas sembler l'avoir été
+    pendant l'incident : ce serait une coïncidence inventée."""
+    client = FixtureGraphClient(fixture_settings)
+
+    politiques = await client.get("/identity/conditionalAccess/policies")
+    pays = next(p for p in politiques if p["displayName"] == "Bloquer les pays à risque")
+
+    assert pays["modifiedDateTime"] == "2026-08-15T11:02:00Z"
+
+
+async def test_chronologie_coherente_entre_outils(fixture_settings: Settings) -> None:
+    """Le décalage doit être IDENTIQUE pour tous les fichiers.
+
+    Avec un décalage calculé fichier par fichier, chaque source glissait
+    différemment et l'ordre réel des événements s'inversait d'un outil à
+    l'autre. La fuite d'identifiants doit précéder la connexion réussie, qui
+    doit elle-même précéder l'attribution de rôle.
+    """
+    client = FixtureGraphClient(fixture_settings)
+
+    detections = await client.get("/identityProtection/riskDetections")
+    signins = await client.get(SIGNINS_PATH)
+    audits = await client.get("/auditLogs/directoryAudits")
+
+    fuite = next(
+        d for d in detections if d["riskEventType"] == "leakedCredentials"
+    )
+    succes = next(
+        s
+        for s in signins
+        if s["userPrincipalName"] == "marketing@teknologiia.com"
+        and s["status"]["errorCode"] == 0
+        and s["clientAppUsed"] == "Browser"
+    )
+    role = next(a for a in audits if a["activityDisplayName"] == "Add member to role")
+
+    assert fuite["detectedDateTime"] < succes["createdDateTime"]
+    assert succes["createdDateTime"] < role["activityDateTime"]
+
+
 async def test_fixture_filtre_de_date(fixture_settings: Settings) -> None:
     client = FixtureGraphClient(fixture_settings)
     since = (datetime.now(UTC) - timedelta(hours=2)).strftime("%Y-%m-%dT%H:%M:%SZ")
