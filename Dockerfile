@@ -4,6 +4,10 @@
 # =============================================================================
 FROM python:3.13-slim AS builder
 
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /build
 
 # Le code est copié avec les métadonnées : hatchling embarque les fixtures JSON
@@ -19,6 +23,16 @@ RUN python -m venv /opt/venv \
 # Étape 2 — exécution
 # =============================================================================
 FROM python:3.13-slim
+
+# Les correctifs de sécurité publiés depuis la construction de l'image de base
+# sont appliqués ici. Sans cette étape, l'image hérite des vulnérabilités
+# connues de `python:3.13-slim` et le scan Trivy de la CI échoue — ce qui est
+# le comportement attendu : un conteneur de sécurité ne doit pas embarquer de
+# CVE corrigeable.
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
 # Exécution sans privilèges : une compromission du serveur ne donne pas root
 # dans le conteneur.
