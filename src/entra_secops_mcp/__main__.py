@@ -7,6 +7,7 @@ import logging
 import sys
 
 from .config import get_settings
+from .diagnostics import check
 from .runtime import configure_logging
 from .server import build_server
 
@@ -28,6 +29,14 @@ def main() -> None:
             "streamable-http pour une exposition distante derrière un proxy."
         ),
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help=(
+            "Ne démarre pas le serveur : vérifie la configuration, l'authentification, "
+            "les permissions consenties et l'accès à chaque endpoint, puis quitte."
+        ),
+    )
     args = parser.parse_args()
 
     # La configuration est validée AVANT tout démarrage : une variable
@@ -39,6 +48,12 @@ def main() -> None:
     except Exception as exc:
         print(f"Configuration invalide.\n\n{exc}", file=sys.stderr)
         raise SystemExit(2) from exc
+
+    if args.check:
+        # Diagnostic : les messages vont sur stdout, aucun protocole n'y circule.
+        configure_logging("WARNING")
+        check(settings)
+        return
 
     configure_logging(settings.log_level)
     logger.info(

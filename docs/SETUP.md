@@ -286,19 +286,65 @@ AZURE_CLIENT_SECRET=le-secret-copie
 ENTRA_DATA_SOURCE=graph
 ```
 
-### Étape 5 — vérifier
+### Étape 5 — vérifier avec le diagnostic intégré
+
+```bash
+python -m entra_secops_mcp --check
+```
+
+Cette commande ne démarre pas le serveur. Elle déroule les quatre points de
+défaillance possibles, dans l'ordre :
+
+1. **Configuration** — les variables sont-elles présentes ?
+2. **Authentification** — le jeton OAuth est-il obtenu ?
+3. **Permissions consenties** — lues directement dans le jeton. C'est ce qui
+   distingue « permission non ajoutée » de « consentement administrateur non
+   accordé », deux erreurs qui produisent le même `403`.
+4. **Accès effectif** — chaque endpoint est appelé pour de vrai.
+
+Sortie attendue quand tout va bien :
+
+```
+3. Permissions réellement consenties
+  ✓ AuditLog.Read.All
+  ✓ Directory.Read.All
+  ✓ IdentityRiskEvent.Read.All
+  ✓ IdentityRiskyUser.Read.All
+  ✓ Policy.Read.All
+
+4. Accès effectif aux endpoints
+  ✓ get_user_context
+  ✓ get_directory_audits
+  ✓ get_conditional_access_policies
+  ✓ get_user_signins
+  ✓ get_risky_users
+  ✓ get_risk_detections
+
+Verdict
+  Les 6 outils sont opérationnels sur le tenant réel.
+```
+
+Aucun secret n'apparaît dans la sortie : elle peut être collée dans un ticket.
+
+### Lire le diagnostic
+
+| Symptôme | Cause | Correction |
+|---|---|---|
+| `AUCUNE permission applicative dans le jeton` | Le consentement administrateur n'a pas été accordé | Portail Entra → l'application → API autorisées → **Accorder le consentement administrateur** |
+| Une permission marquée `✗ absente` | Elle n'a pas été ajoutée, ou en type **déléguée** au lieu d'**application** | La rajouter en « Autorisations d'application », puis reconsentir |
+| Échec sur `get_user_signins` **seul** | Licence insuffisante | Le tenant n'a pas Entra ID P1 |
+| Échec sur `get_risky_users` **et** `get_risk_detections` | Licence insuffisante | Le tenant n'a pas Entra ID P2 |
+| `ÉCHEC` dès l'étape 2 | Secret expiré, mal recopié, ou tenant erroné | Regénérer le secret ; il n'est affiché qu'une seule fois |
+
+> **Attention au piège des licences.** **Microsoft 365 E5** inclut Entra ID P2.
+> **Office 365 E5** ne l'inclut pas. Deux produits différents, des noms voisins.
+> Le diagnostic tranche la question empiriquement.
+
+Une fois le diagnostic vert :
 
 ```bash
 python demo.py
 ```
-
-En cas d'échec, le message indique quoi corriger :
-
-| Message | Correction |
-|---|---|
-| `Authentification refusée (401)` | Secret expiré ou mal copié |
-| `Permission insuffisante (403)` | Consentement administrateur non accordé |
-| `Configuration invalide` | Une variable manque dans `.env` |
 
 ---
 

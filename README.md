@@ -86,6 +86,17 @@ AZURE_CLIENT_SECRET=...
 ENTRA_DATA_SOURCE=graph
 ```
 
+5. Vérifier la connexion, les permissions et les licences :
+
+```bash
+python -m entra_secops_mcp --check
+```
+
+Le diagnostic lit les permissions **réellement consenties** dans le jeton, puis
+appelle chaque endpoint. Il distingue une permission oubliée d'un consentement
+administrateur non accordé — deux erreurs qui produisent le même `403`. Aucun
+secret n'apparaît dans sa sortie.
+
 > **Licence requise.** L'accès aux journaux de connexion via l'API exige une
 > licence Entra ID **P1**, et les outils Identity Protection exigent **P2**.
 > Sans elles, Graph répond `403`. Les autres outils fonctionnent sans licence
