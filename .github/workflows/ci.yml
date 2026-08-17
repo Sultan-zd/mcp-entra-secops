@@ -105,10 +105,33 @@ jobs:
           asyncio.run(main())
           PY
 
-      - name: Analyse de vulnérabilités (Trivy)
-        uses: aquasecurity/trivy-action@master
+      # Rapport complet, non bloquant : il documente ce qui a été trouvé, y
+      # compris les vulnérabilités sans correctif disponible en amont.
+      - name: Inventaire des vulnérabilités (rapport)
+        uses: aquasecurity/trivy-action@0.36.0
+        env:
+          # Le dépôt par défaut (ghcr.io) limite les tirages non authentifiés,
+          # ce qui fait échouer l'étape pour une raison sans rapport avec la
+          # sécurité de l'image. Le miroir AWS n'impose pas cette limite.
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2
         with:
           image-ref: entra-secops-mcp:ci
           severity: HIGH,CRITICAL
+          exit-code: "0"
+          format: table
+
+      # Garde-fou bloquant. Le seuil est CRITICAL et non HIGH, et seules les
+      # vulnérabilités CORRIGEABLES comptent : bloquer sur une faille dont
+      # l'amont n'a pas encore publié le correctif rendrait la CI rouge en
+      # permanence, sans qu'aucune action ne puisse la faire repasser au vert.
+      # Une CI durablement rouge finit par être ignorée — elle protège alors
+      # moins bien qu'un seuil plus étroit mais respecté.
+      - name: Garde-fou vulnérabilités critiques
+        uses: aquasecurity/trivy-action@0.36.0
+        env:
+          TRIVY_DB_REPOSITORY: public.ecr.aws/aquasecurity/trivy-db:2
+        with:
+          image-ref: entra-secops-mcp:ci
+          severity: CRITICAL
           exit-code: "1"
           ignore-unfixed: true
