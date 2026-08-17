@@ -1,0 +1,55 @@
+{
+  "_comment": "Données de DÉMONSTRATION — réponse de GET /v1.0/users/{id}/memberOf. Le champ `_scope` n'existe pas dans Graph : il est propre aux fixtures et indique l'identifiant d'utilisateur auquel l'appartenance se rattache (voir graph._FIXTURE_PATTERNS).",
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#directoryObjects",
+  "value": [
+    {
+      "_scope": "8f3a1c20-1111-4aaa-9c11-000000000001",
+      "@odata.type": "#microsoft.graph.group",
+      "id": "g0000001-7777-4111-9c77-000000000001",
+      "displayName": "Marketing",
+      "securityEnabled": true
+    },
+    {
+      "_scope": "8f3a1c20-1111-4aaa-9c11-000000000001",
+      "@odata.type": "#microsoft.graph.group",
+      "id": "g0000001-7777-4111-9c77-000000000002",
+      "displayName": "Tous les employés",
+      "securityEnabled": true
+    },
+    {
+      "_scope": "8f3a1c20-1111-4aaa-9c11-000000000001",
+      "@odata.type": "#microsoft.graph.directoryRole",
+      "id": "r0000001-8888-4222-9d88-000000000001",
+      "displayName": "Helpdesk Administrator",
+      "roleTemplateId": "729827e3-9c14-49f7-bb1b-9608f156bbb8"
+    },
+    {
+      "_scope": "6d1a9c00-4444-4ddd-8f44-000000000005",
+      "@odata.type": "#microsoft.graph.group",
+      "id": "g0000001-7777-4111-9c77-000000000003",
+      "displayName": "Finance-Approvers",
+      "securityEnabled": true
+    },
+    {
+      "_scope": "6d1a9c00-4444-4ddd-8f44-000000000005",
+      "@odata.type": "#microsoft.graph.group",
+      "id": "g0000001-7777-4111-9c77-000000000002",
+      "displayName": "Tous les employés",
+      "securityEnabled": true
+    },
+    {
+      "_scope": "7e2b0d10-3333-4ccc-9e33-000000000004",
+      "@odata.type": "#microsoft.graph.directoryRole",
+      "id": "r0000001-8888-4222-9d88-000000000002",
+      "displayName": "Global Administrator",
+      "roleTemplateId": "62e90394-69f5-4237-9190-012177145e10"
+    },
+    {
+      "_scope": "7e2b0d10-3333-4ccc-9e33-000000000004",
+      "@odata.type": "#microsoft.graph.group",
+      "id": "g0000001-7777-4111-9c77-000000000004",
+      "displayName": "grp-administrateurs",
+      "securityEnabled": true
+    }
+  ]
+}

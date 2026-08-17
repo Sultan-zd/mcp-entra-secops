@@ -1,0 +1,32 @@
+{
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#auditLogs/signIns",
+  "value": [
+    {
+      "id": "12345-abcde",
+      "createdDateTime": "2026-07-23T10:00:00Z",
+      "userPrincipalName": "ciblée@teknologiia.com",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "192.168.1.50",
+      "clientAppUsed": "Browser",
+      "correlationId": "7890-xyz",
+      "conditionalAccessStatus": "failure",
+      "isInteractive": true,
+      "deviceDetail": {
+        "deviceId": "dev-001",
+        "displayName": "LAPTOP-TEK",
+        "operatingSystem": "Windows 10",
+        "browser": "Edge"
+      },
+      "location": {
+        "city": "Beirut",
+        "state": "Beirut",
+        "countryOrRegion": "LB",
+        "geoCoordinates": { "latitude": 33.8938, "longitude": 35.5018 }
+      },
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Error validating credentials due to invalid username or password."
+      }
+    }
+  ]
+}

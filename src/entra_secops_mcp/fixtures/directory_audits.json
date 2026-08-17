@@ -1,0 +1,163 @@
+{
+  "_comment": "Données de DÉMONSTRATION — réponse de GET /v1.0/auditLogs/directoryAudits. Suite du scénario : après la connexion réussie à 06h16, l'attaquant enrôle une méthode MFA puis s'attribue un rôle.",
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#auditLogs/directoryAudits",
+  "value": [
+    {
+      "id": "b1000001-0000-4000-8000-000000000001",
+      "category": "UserManagement",
+      "activityDisplayName": "User registered security info",
+      "activityDateTime": "2026-08-17T06:18:22Z",
+      "loggedByService": "Authentication Methods",
+      "operationType": "Add",
+      "result": "success",
+      "resultReason": null,
+      "initiatedBy": {
+        "user": {
+          "id": "8f3a1c20-1111-4aaa-9c11-000000000001",
+          "displayName": "Compte Marketing",
+          "userPrincipalName": "marketing@teknologiia.com",
+          "ipAddress": "185.220.101.47"
+        }
+      },
+      "targetResources": [
+        {
+          "id": "8f3a1c20-1111-4aaa-9c11-000000000001",
+          "displayName": "Compte Marketing",
+          "userPrincipalName": "marketing@teknologiia.com",
+          "type": "User",
+          "modifiedProperties": [
+            {
+              "displayName": "AuthenticationMethod",
+              "oldValue": null,
+              "newValue": "\"MicrosoftAuthenticator\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b1000001-0000-4000-8000-000000000002",
+      "category": "RoleManagement",
+      "activityDisplayName": "Add member to role",
+      "activityDateTime": "2026-08-17T06:21:05Z",
+      "loggedByService": "Core Directory",
+      "operationType": "Add",
+      "result": "success",
+      "resultReason": null,
+      "initiatedBy": {
+        "user": {
+          "id": "8f3a1c20-1111-4aaa-9c11-000000000001",
+          "displayName": "Compte Marketing",
+          "userPrincipalName": "marketing@teknologiia.com",
+          "ipAddress": "185.220.101.47"
+        }
+      },
+      "targetResources": [
+        {
+          "id": "8f3a1c20-1111-4aaa-9c11-000000000001",
+          "displayName": "Compte Marketing",
+          "userPrincipalName": "marketing@teknologiia.com",
+          "type": "User",
+          "modifiedProperties": [
+            {
+              "displayName": "Role.DisplayName",
+              "oldValue": null,
+              "newValue": "\"Helpdesk Administrator\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b1000001-0000-4000-8000-000000000003",
+      "category": "ApplicationManagement",
+      "activityDisplayName": "Update application – Certificates and secrets management",
+      "activityDateTime": "2026-08-17T06:29:47Z",
+      "loggedByService": "Core Directory",
+      "operationType": "Update",
+      "result": "success",
+      "resultReason": null,
+      "initiatedBy": {
+        "user": {
+          "id": "8f3a1c20-1111-4aaa-9c11-000000000001",
+          "displayName": "Compte Marketing",
+          "userPrincipalName": "marketing@teknologiia.com",
+          "ipAddress": "185.220.101.47"
+        }
+      },
+      "targetResources": [
+        {
+          "id": "c9d0e1f2-2222-4bbb-8d22-000000000010",
+          "displayName": "Teknologiia Reporting App",
+          "type": "Application",
+          "modifiedProperties": [
+            {
+              "displayName": "KeyDescription",
+              "oldValue": "[]",
+              "newValue": "[\"[KeyIdentifier=...,KeyType=Password,KeyUsage=Verify]\"]"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b1000001-0000-4000-8000-000000000004",
+      "category": "UserManagement",
+      "activityDisplayName": "Update user",
+      "activityDateTime": "2026-08-16T14:05:33Z",
+      "loggedByService": "Core Directory",
+      "operationType": "Update",
+      "result": "success",
+      "resultReason": null,
+      "initiatedBy": {
+        "user": {
+          "id": "7e2b0d10-3333-4ccc-9e33-000000000004",
+          "displayName": "Sarah N.",
+          "userPrincipalName": "sarah.n@teknologiia.com",
+          "ipAddress": "77.42.130.18"
+        }
+      },
+      "targetResources": [
+        {
+          "id": "6d1a9c00-4444-4ddd-8f44-000000000005",
+          "displayName": "Ahmad K.",
+          "userPrincipalName": "ahmad.k@teknologiia.com",
+          "type": "User",
+          "modifiedProperties": [
+            {
+              "displayName": "JobTitle",
+              "oldValue": "\"Analyste\"",
+              "newValue": "\"Analyste senior\""
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "b1000001-0000-4000-8000-000000000005",
+      "category": "Policy",
+      "activityDisplayName": "Update conditional access policy",
+      "activityDateTime": "2026-08-16T09:41:12Z",
+      "loggedByService": "Conditional Access",
+      "operationType": "Update",
+      "result": "failure",
+      "resultReason": "Insufficient privileges to complete the operation.",
+      "initiatedBy": {
+        "user": {
+          "id": "6d1a9c00-4444-4ddd-8f44-000000000005",
+          "displayName": "Ahmad K.",
+          "userPrincipalName": "ahmad.k@teknologiia.com",
+          "ipAddress": "77.42.130.18"
+        }
+      },
+      "targetResources": [
+        {
+          "id": "p0000001-5555-4eee-8a55-000000000001",
+          "displayName": "MFA obligatoire pour tous",
+          "type": "Policy",
+          "modifiedProperties": []
+        }
+      ]
+    }
+  ]
+}

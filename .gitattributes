@@ -1,0 +1,20 @@
+# Le dépôt stocke des fins de ligne LF, quel que soit le poste de travail.
+# Sans cette règle, un développeur Windows et un développeur Linux produisent
+# des diffs entiers sur des fichiers qu'ils n'ont pas modifiés.
+* text=auto eol=lf
+
+# Fichiers devant impérativement rester en LF : ils sont exécutés dans des
+# conteneurs Linux, où un retour chariot CRLF casse le shebang et les scripts.
+*.py    text eol=lf
+*.sh    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.toml  text eol=lf
+*.json  text eol=lf
+*.md    text eol=lf
+Dockerfile text eol=lf
+
+# Binaires : aucune conversion.
+*.pdf   binary
+*.png   binary
+*.jpg   binary

@@ -1,0 +1,70 @@
+{
+  "_comment": "Données de DÉMONSTRATION — réponse de GET /v1.0/identityProtection/riskDetections. Explique POURQUOI marketing@teknologiia.com est signalé : identifiants divulgués puis connexion depuis un réseau anonymisant.",
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityProtection/riskDetections",
+  "value": [
+    {
+      "id": "d1000001-0000-4000-8000-000000000001",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "riskEventType": "leakedCredentials",
+      "riskLevel": "high",
+      "riskState": "atRisk",
+      "riskDetail": "none",
+      "source": "IdentityProtection",
+      "detectionTimingType": "offline",
+      "activity": "user",
+      "ipAddress": null,
+      "location": null,
+      "activityDateTime": "2026-08-17T05:40:00Z",
+      "detectedDateTime": "2026-08-17T05:45:00Z"
+    },
+    {
+      "id": "d1000001-0000-4000-8000-000000000002",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "riskEventType": "anonymizedIPAddress",
+      "riskLevel": "high",
+      "riskState": "atRisk",
+      "riskDetail": "none",
+      "source": "IdentityProtection",
+      "detectionTimingType": "realtime",
+      "activity": "signin",
+      "ipAddress": "185.220.101.47",
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "activityDateTime": "2026-08-17T06:16:04Z",
+      "detectedDateTime": "2026-08-17T06:16:06Z"
+    },
+    {
+      "id": "d1000001-0000-4000-8000-000000000003",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "riskEventType": "unfamiliarFeatures",
+      "riskLevel": "medium",
+      "riskState": "atRisk",
+      "riskDetail": "none",
+      "source": "IdentityProtection",
+      "detectionTimingType": "realtime",
+      "activity": "signin",
+      "ipAddress": "185.220.101.47",
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "activityDateTime": "2026-08-17T06:02:11Z",
+      "detectedDateTime": "2026-08-17T06:02:14Z"
+    },
+    {
+      "id": "d1000001-0000-4000-8000-000000000004",
+      "userPrincipalName": "ahmad.k@teknologiia.com",
+      "userDisplayName": "Ahmad K.",
+      "riskEventType": "impossibleTravel",
+      "riskLevel": "medium",
+      "riskState": "atRisk",
+      "riskDetail": "none",
+      "source": "IdentityProtection",
+      "detectionTimingType": "offline",
+      "activity": "signin",
+      "ipAddress": "196.28.240.9",
+      "location": { "city": "Lagos", "countryOrRegion": "NG" },
+      "activityDateTime": "2026-08-17T05:31:09Z",
+      "detectedDateTime": "2026-08-17T05:52:00Z"
+    }
+  ]
+}

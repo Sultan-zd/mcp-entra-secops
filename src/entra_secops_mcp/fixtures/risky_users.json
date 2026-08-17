@@ -1,0 +1,39 @@
+{
+  "_comment": "Données de DÉMONSTRATION — réponse de GET /v1.0/identityProtection/riskyUsers. Cohérentes avec signins.json : marketing@teknologiia.com est le compte compromis du scénario.",
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#identityProtection/riskyUsers",
+  "value": [
+    {
+      "id": "8f3a1c20-1111-4aaa-9c11-000000000001",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "riskLevel": "high",
+      "riskState": "atRisk",
+      "riskDetail": "userPerformedSecuredPasswordReset",
+      "isDeleted": false,
+      "isProcessing": false,
+      "riskLastUpdatedDateTime": "2026-08-17T06:16:40Z"
+    },
+    {
+      "id": "8f3a1c20-1111-4aaa-9c11-000000000002",
+      "userPrincipalName": "ahmad.k@teknologiia.com",
+      "userDisplayName": "Ahmad K.",
+      "riskLevel": "medium",
+      "riskState": "atRisk",
+      "riskDetail": "none",
+      "isDeleted": false,
+      "isProcessing": false,
+      "riskLastUpdatedDateTime": "2026-08-17T05:34:10Z"
+    },
+    {
+      "id": "8f3a1c20-1111-4aaa-9c11-000000000003",
+      "userPrincipalName": "old.contractor@teknologiia.com",
+      "userDisplayName": "Ancien Prestataire",
+      "riskLevel": "low",
+      "riskState": "remediated",
+      "riskDetail": "adminConfirmedUserCompromised",
+      "isDeleted": false,
+      "isProcessing": false,
+      "riskLastUpdatedDateTime": "2026-08-14T11:20:00Z"
+    }
+  ]
+}

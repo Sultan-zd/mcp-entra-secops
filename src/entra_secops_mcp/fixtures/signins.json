@@ -1,0 +1,243 @@
+{
+  "_comment": "Données de DÉMONSTRATION, structurées comme une réponse réelle de GET /v1.0/auditLogs/signIns. Les horodatages sont recalés sur l'heure courante au chargement (voir graph._rebase_to_now), afin que les fenêtres de 24 h restent pertinentes dans le temps. Scénario : compromission de marketing@teknologiia.com par force brute depuis 185.220.101.47, suivie d'une connexion réussie.",
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#auditLogs/signIns",
+  "value": [
+    {
+      "id": "a1000001-0000-4000-8000-000000000001",
+      "createdDateTime": "2026-08-17T06:02:11Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "notApplied",
+      "riskLevelDuringSignIn": "none",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 10", "browser": "Chrome 141.0.0" },
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Error validating credentials due to invalid username or password."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000002",
+      "createdDateTime": "2026-08-17T06:03:47Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "notApplied",
+      "riskLevelDuringSignIn": "none",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 10", "browser": "Chrome 141.0.0" },
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Error validating credentials due to invalid username or password."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000003",
+      "createdDateTime": "2026-08-17T06:05:19Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "notApplied",
+      "riskLevelDuringSignIn": "low",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 10", "browser": "Chrome 141.0.0" },
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Error validating credentials due to invalid username or password."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000004",
+      "createdDateTime": "2026-08-17T06:07:02Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "notApplied",
+      "riskLevelDuringSignIn": "low",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 10", "browser": "Chrome 141.0.0" },
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Error validating credentials due to invalid username or password."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000005",
+      "createdDateTime": "2026-08-17T06:09:33Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "notApplied",
+      "riskLevelDuringSignIn": "medium",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 10", "browser": "Chrome 141.0.0" },
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Error validating credentials due to invalid username or password."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000006",
+      "createdDateTime": "2026-08-17T06:11:58Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "notApplied",
+      "riskLevelDuringSignIn": "medium",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 10", "browser": "Chrome 141.0.0" },
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Error validating credentials due to invalid username or password."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000007",
+      "createdDateTime": "2026-08-17T06:14:26Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "notApplied",
+      "riskLevelDuringSignIn": "medium",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 10", "browser": "Chrome 141.0.0" },
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": {
+        "errorCode": 50126,
+        "failureReason": "Error validating credentials due to invalid username or password."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000008",
+      "createdDateTime": "2026-08-17T06:16:04Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Office 365 Exchange Online",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "success",
+      "riskLevelDuringSignIn": "high",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 10", "browser": "Chrome 141.0.0" },
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": { "errorCode": 0, "failureReason": null }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000009",
+      "createdDateTime": "2026-08-17T06:24:41Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Exchange ActiveSync",
+      "ipAddress": "185.220.101.47",
+      "clientAppUsed": "IMAP",
+      "conditionalAccessStatus": "notApplied",
+      "riskLevelDuringSignIn": "high",
+      "isInteractive": false,
+      "deviceDetail": {},
+      "location": { "city": "Amsterdam", "countryOrRegion": "NL" },
+      "status": { "errorCode": 0, "failureReason": null }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000010",
+      "createdDateTime": "2026-08-16T08:12:07Z",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "userDisplayName": "Compte Marketing",
+      "appDisplayName": "Microsoft Teams",
+      "ipAddress": "77.42.130.18",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "success",
+      "riskLevelDuringSignIn": "none",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 11", "browser": "Edge 141.0.0" },
+      "location": { "city": "Beirut", "countryOrRegion": "LB" },
+      "status": { "errorCode": 0, "failureReason": null }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000011",
+      "createdDateTime": "2026-08-16T13:47:52Z",
+      "userPrincipalName": "ahmad.k@teknologiia.com",
+      "userDisplayName": "Ahmad K.",
+      "appDisplayName": "Microsoft Teams",
+      "ipAddress": "77.42.130.18",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "success",
+      "riskLevelDuringSignIn": "none",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "Windows 11", "browser": "Edge 141.0.0" },
+      "location": { "city": "Beirut", "countryOrRegion": "LB" },
+      "status": { "errorCode": 0, "failureReason": null }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000012",
+      "createdDateTime": "2026-08-17T05:31:09Z",
+      "userPrincipalName": "ahmad.k@teknologiia.com",
+      "userDisplayName": "Ahmad K.",
+      "appDisplayName": "Office 365 SharePoint Online",
+      "ipAddress": "196.28.240.9",
+      "clientAppUsed": "Mobile Apps and Desktop clients",
+      "conditionalAccessStatus": "failure",
+      "riskLevelDuringSignIn": "low",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "iOS 19.2", "browser": "Safari" },
+      "location": { "city": "Lagos", "countryOrRegion": "NG" },
+      "status": {
+        "errorCode": 500121,
+        "failureReason": "Authentication failed during strong authentication request."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000013",
+      "createdDateTime": "2026-08-17T05:33:44Z",
+      "userPrincipalName": "ahmad.k@teknologiia.com",
+      "userDisplayName": "Ahmad K.",
+      "appDisplayName": "Office 365 SharePoint Online",
+      "ipAddress": "196.28.240.9",
+      "clientAppUsed": "Mobile Apps and Desktop clients",
+      "conditionalAccessStatus": "failure",
+      "riskLevelDuringSignIn": "medium",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "iOS 19.2", "browser": "Safari" },
+      "location": { "city": "Lagos", "countryOrRegion": "NG" },
+      "status": {
+        "errorCode": 53003,
+        "failureReason": "Access has been blocked by Conditional Access policies."
+      }
+    },
+    {
+      "id": "a1000001-0000-4000-8000-000000000014",
+      "createdDateTime": "2026-08-17T07:02:15Z",
+      "userPrincipalName": "sarah.n@teknologiia.com",
+      "userDisplayName": "Sarah N.",
+      "appDisplayName": "Azure Portal",
+      "ipAddress": "77.42.130.18",
+      "clientAppUsed": "Browser",
+      "conditionalAccessStatus": "success",
+      "riskLevelDuringSignIn": "none",
+      "isInteractive": true,
+      "deviceDetail": { "operatingSystem": "MacOS 26.1", "browser": "Safari 26.1" },
+      "location": { "city": "Beirut", "countryOrRegion": "LB" },
+      "status": { "errorCode": 0, "failureReason": null }
+    }
+  ]
+}

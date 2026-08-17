@@ -1,0 +1,46 @@
+{
+  "_comment": "Données de DÉMONSTRATION — réponse de GET /v1.0/users. Les identifiants correspondent à ceux de member_of.json (champ _scope).",
+  "@odata.context": "https://graph.microsoft.com/v1.0/$metadata#users",
+  "value": [
+    {
+      "id": "8f3a1c20-1111-4aaa-9c11-000000000001",
+      "displayName": "Compte Marketing",
+      "userPrincipalName": "marketing@teknologiia.com",
+      "jobTitle": "Chargé de communication",
+      "department": "Marketing",
+      "accountEnabled": true,
+      "createdDateTime": "2024-09-02T08:30:00Z",
+      "userType": "Member"
+    },
+    {
+      "id": "6d1a9c00-4444-4ddd-8f44-000000000005",
+      "displayName": "Ahmad K.",
+      "userPrincipalName": "ahmad.k@teknologiia.com",
+      "jobTitle": "Analyste senior",
+      "department": "Finance",
+      "accountEnabled": true,
+      "createdDateTime": "2023-03-14T10:00:00Z",
+      "userType": "Member"
+    },
+    {
+      "id": "7e2b0d10-3333-4ccc-9e33-000000000004",
+      "displayName": "Sarah N.",
+      "userPrincipalName": "sarah.n@teknologiia.com",
+      "jobTitle": "Responsable IT",
+      "department": "Systèmes d'information",
+      "accountEnabled": true,
+      "createdDateTime": "2022-06-01T09:00:00Z",
+      "userType": "Member"
+    },
+    {
+      "id": "5c0987ff-6666-4fff-8b66-000000000006",
+      "displayName": "Ancien Prestataire",
+      "userPrincipalName": "old.contractor@teknologiia.com",
+      "jobTitle": "Prestataire externe",
+      "department": null,
+      "accountEnabled": false,
+      "createdDateTime": "2025-01-20T13:45:00Z",
+      "userType": "Guest"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+# Rien de tout ceci n'a sa place dans le contexte de build : c'est du poids en
+# plus, et pour le premier bloc, un risque de fuite de secret dans une couche
+# d'image.
+.env
+.env.*
+!.env.example
+*.pem
+*.pfx
+*.key
+
+.git/
+.github/
+venv/
+.venv/
+
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+tests/
+docs/
+*.pdf
+*.md
+!README.md
+
+.vscode/
+.idea/
