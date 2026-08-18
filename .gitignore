@@ -31,3 +31,8 @@ htmlcov/
 .idea/
 Thumbs.db
 desktop.ini
+
+# Documents internes Teknologiia : utiles localement, mais un depot public
+# n'est pas le bon endroit pour la specification interne d'un employeur.
+*.pdf
+!docs/*.pdf
