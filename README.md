@@ -191,6 +191,21 @@ mécanismes qui changent la nature de l'outil :
 > `unknown` signifie « aucune source ne le connaît ». **Ce n'est pas un verdict
 > d'innocuité**, et le serveur le dit explicitement.
 
+### Vérifié sur les API réelles
+
+Le serveur a été exécuté contre VirusTotal et AbuseIPDB, sans clé GreyNoise :
+
+```
+185.220.101.47  malicious 100  confiance medium
+  virustotal   16/91 moteurs signalent une menace, 2 la jugent suspecte
+  abuseipdb    100/100 sur 112 signalements
+  greynoise    not_configured — aucune clé d'API
+```
+
+La dégradation gracieuse se lit directement : le verdict est produit avec
+deux sources, l'absence de la troisième est signalée, et la confiance passe
+honnêtement de `high` à `medium`.
+
 ### Sans clé d'API
 
 `TI_DATA_SOURCE=fixture` rejoue un scénario cohérent avec celui du serveur
