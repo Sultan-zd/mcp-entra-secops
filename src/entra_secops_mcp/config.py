@@ -76,12 +76,8 @@ class Settings(BaseSettings):
     default_lookback_hours: int = Field(
         default=24, ge=1, validation_alias="ENTRA_DEFAULT_LOOKBACK_HOURS"
     )
-    max_lookback_hours: int = Field(
-        default=168, ge=1, validation_alias="ENTRA_MAX_LOOKBACK_HOURS"
-    )
-    default_page_size: int = Field(
-        default=25, ge=1, validation_alias="ENTRA_DEFAULT_PAGE_SIZE"
-    )
+    max_lookback_hours: int = Field(default=168, ge=1, validation_alias="ENTRA_MAX_LOOKBACK_HOURS")
+    default_page_size: int = Field(default=25, ge=1, validation_alias="ENTRA_DEFAULT_PAGE_SIZE")
     max_page_size: int = Field(default=100, ge=1, validation_alias="ENTRA_MAX_PAGE_SIZE")
 
     # --- Journalisation -----------------------------------------------------
@@ -111,9 +107,7 @@ class Settings(BaseSettings):
                 "ENTRA_DEFAULT_LOOKBACK_HOURS ne peut pas dépasser ENTRA_MAX_LOOKBACK_HOURS."
             )
         if self.default_page_size > self.max_page_size:
-            raise ValueError(
-                "ENTRA_DEFAULT_PAGE_SIZE ne peut pas dépasser ENTRA_MAX_PAGE_SIZE."
-            )
+            raise ValueError("ENTRA_DEFAULT_PAGE_SIZE ne peut pas dépasser ENTRA_MAX_PAGE_SIZE.")
         return self
 
     def clamp_hours(self, hours: int | None) -> int:

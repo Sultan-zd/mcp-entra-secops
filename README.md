@@ -1,13 +1,18 @@
-# Entra ID SecOps MCP Server
+# ARGUS — Plateforme SecOps agentique
 
 [![CI](https://github.com/Sultan-zd/mcp-entra-secops/actions/workflows/ci.yml/badge.svg)](https://github.com/Sultan-zd/mcp-entra-secops/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-blue)
 ![MCP](https://img.shields.io/badge/MCP-2026--07--28-brightgreen)
 ![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)
 
-Serveur [MCP](https://modelcontextprotocol.io) qui expose les journaux de sécurité
-de **Microsoft Entra ID** comme outils exécutables par un agent IA (Claude Desktop,
-Cursor, ou tout autre client MCP).
+Serveurs [MCP](https://modelcontextprotocol.io) exposant la télémétrie de sécurité
+comme outils exécutables par un agent IA (Claude Desktop, Cursor, ou tout autre
+client MCP).
+
+| Serveur | Domaine | Outils |
+|---|---|---|
+| `entra-secops-mcp` | Identité — journaux Microsoft Entra ID | 6 |
+| `threat-intel-mcp` | Renseignement — VirusTotal, AbuseIPDB, GreyNoise | 4 |
 
 Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
@@ -133,7 +138,7 @@ les trames JSON.
 ## Développement
 
 ```bash
-pytest              # 81 tests
+pytest              # 180 tests
 ruff check src tests
 mypy src            # mode strict
 pre-commit install  # contrôles avant chaque commit
@@ -144,12 +149,56 @@ python demo.py      # investigation de démonstration
 
 | | |
 |---|---|
-| Outils | 6, tous en lecture seule |
-| Tests | 81, sans tenant Azure requis |
+| Outils | 10 au total (6 identité + 4 renseignement), tous en lecture seule |
+| Tests | 180, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
 | Conteneur | vérifié via un vrai client MCP : démarrage 2,4 s, appel d'outil ~110 ms |
 
+---
+
+## Serveur de renseignement sur les menaces
+
+```bash
+threat-intel-mcp --check      # vérifie sources, quotas et chemin complet
+```
+
+Quatre outils : `enrich_ip`, `enrich_domain`, `enrich_file_hash`, `bulk_enrich`.
+
+### Ce n'est pas un relais d'API
+
+Un relais transmet une question et rend une réponse. Ce serveur ajoute six
+mécanismes qui changent la nature de l'outil :
+
+| Mécanisme | Pourquoi |
+|---|---|
+| **Fusion déterministe** | Trois sources, trois échelles incomparables. La décision est prise par du code testé, jamais par le prompt : aucun texte injecté ne peut renverser un score. |
+| **Adresses internes jamais transmises** | Soumettre `10.0.0.5` à un service tiers divulgue la topologie du réseau, de façon irréversible. Le court-circuit précède tout appel réseau. |
+| **Cache 24 h** | Les mêmes IP reviennent sans cesse dans une enquête. Sans cache, le quota gratuit VirusTotal (~4 req/min) est épuisé au milieu de la première investigation. |
+| **Limitation de débit** | Dépasser le quota ne ralentit pas : l'API renvoie des 429 qui consomment quand même le quota journalier. |
+| **Dégradation gracieuse** | Une source en panne ne fait jamais échouer l'enquête. Le verdict est produit avec les sources restantes, et l'indisponibilité est signalée. |
+| **Suppression du bruit** | Un scanner de recherche référencé (Shodan, Censys) ou un service courant (DNS public) n'est jamais signalé. Sans cette règle, l'équipe cesse de lire l'outil. |
+
+### Le verdict, en un coup d'œil
+
+| Champ | Sens |
+|---|---|
+| `verdict` | `malicious`, `suspicious`, `benign`, `unknown`, `internal` |
+| `score` | 0 à 100, consolidé — **le maximum** des sources, jamais la moyenne |
+| `confidence` | Relative aux sources **capables** de traiter l'indicateur, pas à un décompte brut |
+| `sources` | Détail par source, **pannes comprises** |
+
+> `unknown` signifie « aucune source ne le connaît ». **Ce n'est pas un verdict
+> d'innocuité**, et le serveur le dit explicitement.
+
+### Sans clé d'API
+
+`TI_DATA_SOURCE=fixture` rejoue un scénario cohérent avec celui du serveur
+d'identité : l'adresse `185.220.101.47` de l'incident Entra y est un nœud de
+sortie Tor. Les deux serveurs racontent la même histoire.
+
+---
+
 ## Licence
 
-MIT.
+MIT — voir [LICENSE](LICENSE).

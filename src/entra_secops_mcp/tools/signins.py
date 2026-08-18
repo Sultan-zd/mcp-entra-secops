@@ -58,8 +58,7 @@ async def get_user_signins(
         # Le filtrage part côté Microsoft : filtrer en Python après coup
         # impliquerait de télécharger les journaux de tout le tenant.
         "$filter": (
-            f"userPrincipalName eq '{escape_odata(upn)}' "
-            f"and createdDateTime ge {since_iso(window)}"
+            f"userPrincipalName eq '{escape_odata(upn)}' and createdDateTime ge {since_iso(window)}"
         ),
         "$top": size,
         "$orderby": "createdDateTime desc",

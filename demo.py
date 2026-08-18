@@ -60,10 +60,7 @@ async def main() -> None:
 
         titre("4. Qu'a fait l'attaquant une fois entré ?")
         audits = await get_directory_audits(hours=168)
-        print(
-            f"  {audits.total_entries} modifications, "
-            f"dont {audits.sensitive_entries} sensibles"
-        )
+        print(f"  {audits.total_entries} modifications, dont {audits.sensitive_entries} sensibles")
         for entree in audits.entries:
             if entree.security_note:
                 print(f"    · {entree.activity} — par {entree.initiated_by}")

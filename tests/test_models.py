@@ -75,9 +75,7 @@ def test_champs_bruits_absents_de_la_sortie() -> None:
 
 
 def test_agregats_et_note_de_compromission() -> None:
-    events = [
-        SignInEvent.from_graph(_raw(status={"errorCode": 50126})) for _ in range(6)
-    ]
+    events = [SignInEvent.from_graph(_raw(status={"errorCode": 50126})) for _ in range(6)]
     events.append(SignInEvent.from_graph(_raw(status={"errorCode": 0})))
 
     report = SignInReport.build("alice@contoso.com", 24, events)

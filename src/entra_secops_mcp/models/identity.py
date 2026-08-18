@@ -79,9 +79,7 @@ class RiskyUsersReport(BaseModel):
     def build(cls, users: list[RiskyUser]) -> RiskyUsersReport:
         high = sum(1 for u in users if u.risk_level == "high")
         medium = sum(1 for u in users if u.risk_level == "medium")
-        active = sum(
-            1 for u in users if u.risk_state in {"atRisk", "confirmedCompromised"}
-        )
+        active = sum(1 for u in users if u.risk_state in {"atRisk", "confirmedCompromised"})
 
         notes: list[str] = []
         if high:

@@ -107,9 +107,7 @@ class HttpGraphClient(GraphClient):
         from azure.identity.aio import ClientSecretCredential
 
         if not (
-            settings.azure_tenant_id
-            and settings.azure_client_id
-            and settings.azure_client_secret
+            settings.azure_tenant_id and settings.azure_client_id and settings.azure_client_secret
         ):
             raise GraphError(
                 "Identifiants Azure incomplets. Vérifiez AZURE_TENANT_ID, AZURE_CLIENT_ID "

@@ -64,11 +64,7 @@ async def get_risky_users(
 async def get_risk_detections(
     upn: Annotated[
         str | None,
-        Field(
-            description=(
-                "UPN à cibler. Omettre pour obtenir les détections de tout le tenant."
-            )
-        ),
+        Field(description=("UPN à cibler. Omettre pour obtenir les détections de tout le tenant.")),
     ] = None,
     hours: Annotated[
         int | None,

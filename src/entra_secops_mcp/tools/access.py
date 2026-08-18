@@ -22,8 +22,7 @@ USERS_ENDPOINT = "/users"
 #: est la première étape de la troncature : ce qui n'est pas demandé n'est même
 #: pas transféré sur le réseau.
 _USER_FIELDS = (
-    "id,displayName,userPrincipalName,jobTitle,department,"
-    "accountEnabled,createdDateTime,userType"
+    "id,displayName,userPrincipalName,jobTitle,department,accountEnabled,createdDateTime,userType"
 )
 
 

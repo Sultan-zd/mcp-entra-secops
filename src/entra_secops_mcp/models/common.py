@@ -91,8 +91,6 @@ def format_location(location: dict[str, Any] | None) -> str:
     if not location:
         return "Inconnue"
     parts = [
-        str(location.get(key)).strip()
-        for key in ("city", "countryOrRegion")
-        if location.get(key)
+        str(location.get(key)).strip() for key in ("city", "countryOrRegion") if location.get(key)
     ]
     return ", ".join(parts) if parts else "Inconnue"

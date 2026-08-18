@@ -59,8 +59,7 @@ class ConditionalAccessPolicy(BaseModel):
         grant = raw.get("grantControls") or {}
 
         controles = [
-            GRANT_CONTROLS.get(control, control)
-            for control in (grant.get("builtInControls") or [])
+            GRANT_CONTROLS.get(control, control) for control in (grant.get("builtInControls") or [])
         ]
 
         state = raw.get("state", "unknown")

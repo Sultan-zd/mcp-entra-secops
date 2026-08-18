@@ -3,13 +3,13 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "entra-secops-mcp"
-version = "0.1.0"
-description = "Serveur MCP exposant les journaux de sécurité Microsoft Entra ID comme outils exécutables pour un agent IA"
+name = "argus-secops"
+version = "0.2.0"
+description = "Plateforme SecOps agentique : serveurs MCP d'identité et de renseignement sur les menaces"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
-keywords = ["mcp", "entra-id", "azure", "secops", "microsoft-graph"]
+keywords = ["mcp", "entra-id", "azure", "secops", "threat-intelligence", "virustotal"]
 
 dependencies = [
     # API MCPServer (SDK 2.x). L'ancienne API FastMCP du SDK 1.x n'existe plus.
@@ -24,6 +24,10 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
+# Cache partage entre processus. Sans cette extra, le serveur utilise un
+# cache en memoire : suffisant pour un poste de travail, insuffisant des que
+# plusieurs instances tournent en parallele.
+cache = ["redis>=5.0"]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
@@ -34,9 +38,10 @@ dev = [
 
 [project.scripts]
 entra-secops-mcp = "entra_secops_mcp.__main__:main"
+threat-intel-mcp = "threat_intel_mcp.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/entra_secops_mcp"]
+packages = ["src/entra_secops_mcp", "src/threat_intel_mcp"]
 
 # ---------------------------------------------------------------------------
 [tool.ruff]
@@ -60,7 +65,7 @@ disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["mcp.*", "azure.*"]
+module = ["mcp.*", "azure.*", "redis.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------

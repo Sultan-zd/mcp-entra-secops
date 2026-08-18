@@ -1,0 +1,250 @@
+{
+  "_comment": "Donnees de DEMONSTRATION, actives quand TI_DATA_SOURCE=fixture. Les indicateurs sont volontairement coherents avec le scenario d'incident du serveur entra-secops-mcp : l'adresse 185.220.101.47 est celle de la compromission de marketing@teknologiia.com, et 77.42.130.18 celle du bureau de Beyrouth. Les deux serveurs racontent ainsi la meme histoire.",
+
+  "indicators": {
+    "185.220.101.47": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "ok",
+            "score": 78.4,
+            "detail": "12/62 moteurs signalent une menace, 3 la jugent suspecte"
+          }
+        },
+        {
+          "result": {
+            "source": "abuseipdb",
+            "status": "ok",
+            "score": 100.0,
+            "detail": "Score de confiance 100/100 sur 847 signalement(s) — usage declare : Data Center/Web Hosting/Transit"
+          }
+        },
+        {
+          "result": {
+            "source": "greynoise",
+            "status": "ok",
+            "score": 60.0,
+            "detail": "Activite malveillante observee a grande echelle (Tor Exit Node)"
+          },
+          "bonus": 25
+        }
+      ],
+      "attributes": {
+        "pays": "NL",
+        "hebergeur": "Zwiebelfreunde e.V.",
+        "asn": "AS205100",
+        "tor": "oui",
+        "type_usage": "Data Center/Web Hosting/Transit"
+      }
+    },
+
+    "77.42.130.18": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "ok",
+            "score": 0.0,
+            "detail": "0/62 moteurs signalent une menace"
+          }
+        },
+        {
+          "result": {
+            "source": "abuseipdb",
+            "status": "ok",
+            "score": 0.0,
+            "detail": "Score de confiance 0/100 sur 0 signalement(s) — usage declare : Fixed Line ISP"
+          }
+        },
+        {
+          "result": {
+            "source": "greynoise",
+            "status": "not_found",
+            "detail": "Absente du bruit de fond d'Internet : l'adresse ne balaie pas massivement, ce qui peut indiquer une activite ciblee."
+          }
+        }
+      ],
+      "attributes": {
+        "pays": "LB",
+        "hebergeur": "Ogero Telecom",
+        "type_usage": "Fixed Line ISP"
+      }
+    },
+
+    "196.28.240.9": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "ok",
+            "score": 6.5,
+            "detail": "2/62 moteurs signalent une menace (detection isolee, score attenue)"
+          }
+        },
+        {
+          "result": {
+            "source": "abuseipdb",
+            "status": "ok",
+            "score": 43.0,
+            "detail": "Score de confiance 43/100 sur 11 signalement(s) — usage declare : Mobile ISP"
+          }
+        },
+        {
+          "result": {
+            "source": "greynoise",
+            "status": "ok",
+            "score": 20.0,
+            "detail": "Balayage indifferencie d'Internet observe (unknown scanner) : l'adresse ne vise pas specifiquement l'organisation."
+          }
+        }
+      ],
+      "attributes": {
+        "pays": "NG",
+        "hebergeur": "MTN Nigeria",
+        "type_usage": "Mobile ISP"
+      }
+    },
+
+    "8.8.8.8": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "ok",
+            "score": 1.6,
+            "detail": "1/62 moteurs signalent une menace (detection isolee, score attenue)"
+          }
+        },
+        {
+          "result": {
+            "source": "abuseipdb",
+            "status": "ok",
+            "score": 0.0,
+            "detail": "Adresse figurant sur la liste blanche d'AbuseIPDB."
+          },
+          "override": "benign",
+          "override_reason": "Infrastructure referencee comme legitime par AbuseIPDB (Google LLC)."
+        },
+        {
+          "result": {
+            "source": "greynoise",
+            "status": "ok",
+            "score": 0.0,
+            "detail": "Service d'infrastructure courant reference par GreyNoise (Google Public DNS)."
+          },
+          "override": "benign",
+          "override_reason": "Service d'infrastructure courant reference par GreyNoise (Google Public DNS)."
+        }
+      ],
+      "attributes": {
+        "pays": "US",
+        "hebergeur": "Google LLC",
+        "asn": "AS15169"
+      }
+    },
+
+    "162.142.125.13": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "ok",
+            "score": 4.8,
+            "detail": "3/62 moteurs signalent une menace"
+          }
+        },
+        {
+          "result": {
+            "source": "abuseipdb",
+            "status": "ok",
+            "score": 18.0,
+            "detail": "Score de confiance 18/100 sur 32 signalement(s)"
+          }
+        },
+        {
+          "result": {
+            "source": "greynoise",
+            "status": "ok",
+            "score": 0.0,
+            "detail": "Scanner Internet legitime reference par GreyNoise (Censys)."
+          },
+          "override": "benign",
+          "override_reason": "Scanner Internet legitime reference par GreyNoise (Censys)."
+        }
+      ],
+      "attributes": {
+        "pays": "US",
+        "hebergeur": "Censys Inc.",
+        "note": "Scanner de recherche academique"
+      }
+    },
+
+    "44d88612fea8a8f36de82e1278abb02f": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "ok",
+            "score": 96.8,
+            "detail": "61/63 moteurs signalent une menace — famille suggeree : eicar/test"
+          }
+        }
+      ],
+      "attributes": {
+        "nom_courant": "Fichier de test EICAR",
+        "taille": "68 octets"
+      }
+    },
+
+    "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "not_found",
+            "detail": "Aucune analyse disponible."
+          }
+        }
+      ],
+      "attributes": {
+        "note": "Condensat SHA-256 du fichier vide"
+      }
+    },
+
+    "secure-login-teknologiia.com": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "ok",
+            "score": 71.0,
+            "detail": "18/94 moteurs signalent une menace — famille suggeree : phishing"
+          }
+        }
+      ],
+      "attributes": {
+        "age_du_domaine": "4 jours",
+        "bureau_enregistrement": "NameCheap, Inc.",
+        "note": "Ressemble au domaine legitime teknologiia.com"
+      }
+    },
+
+    "microsoft.com": {
+      "signals": [
+        {
+          "result": {
+            "source": "virustotal",
+            "status": "ok",
+            "score": 0.0,
+            "detail": "0/94 moteurs signalent une menace"
+          }
+        }
+      ],
+      "attributes": {
+        "age_du_domaine": "environ 34 ans",
+        "categorie": "technologie"
+      }
+    }
+  }
+}

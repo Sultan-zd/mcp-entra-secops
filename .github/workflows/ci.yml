@@ -42,8 +42,10 @@ jobs:
       - name: Tests (pytest)
         run: pytest
         env:
-          # Aucun identifiant Azure n'est nécessaire : la suite est hermétique.
+          # Aucun identifiant ni clé d'API n'est nécessaire : la suite est
+          # hermétique et n'atteint jamais le réseau.
           ENTRA_DATA_SOURCE: fixture
+          TI_DATA_SOURCE: fixture
 
   secrets:
     name: Recherche de secrets

@@ -361,9 +361,7 @@ async def test_chronologie_coherente_entre_outils(fixture_settings: Settings) ->
     signins = await client.get(SIGNINS_PATH)
     audits = await client.get("/auditLogs/directoryAudits")
 
-    fuite = next(
-        d for d in detections if d["riskEventType"] == "leakedCredentials"
-    )
+    fuite = next(d for d in detections if d["riskEventType"] == "leakedCredentials")
     succes = next(
         s
         for s in signins
