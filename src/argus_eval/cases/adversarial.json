@@ -1,0 +1,137 @@
+{
+  "_comment": "Cas construits pour mettre l'agent en defaut, et non pour confirmer qu'il fonctionne. Un jeu de reference ecrit par l'auteur du code de decision valide surtout sa propre comprehension : ces cas explorent deliberement les frontieres ou le raisonnement casse.",
+  "cases": [
+    {
+      "id": "ADV-001",
+      "title": "Changement de mot de passe : echecs puis succes, mais depuis le bureau",
+      "tags": ["identity", "faux-positif", "adversarial"],
+      "alert": { "kind": "compte_compromis", "upn": "sarah.n@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "sarah.n@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Finance", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 8, "window_hours": 48, "failures": 6, "successes": 2,
+          "distinct_ip_addresses": ["77.42.130.18"],
+          "distinct_locations": ["Beirut, LB"],
+          "notes": ["6 échecs sur la fenêtre : volume compatible avec une attaque par force brute."]
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": {
+          "total": 1, "malicious": 0, "suspicious": 0, "benign": 1,
+          "results": [{ "indicator": "77.42.130.18", "verdict": "benign" }], "notes": []
+        },
+        "get_directory_audits": { "total_entries": 0, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "benign", "escalate": false }
+    },
+
+    {
+      "id": "ADV-002",
+      "title": "Meme motif, mais depuis deux pays et une IP inconnue",
+      "tags": ["identity", "adversarial"],
+      "alert": { "kind": "compte_compromis", "upn": "sarah.n@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "sarah.n@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Finance", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 8, "window_hours": 48, "failures": 6, "successes": 2,
+          "distinct_ip_addresses": ["77.42.130.18", "45.87.212.9"],
+          "distinct_locations": ["Beirut, LB", "Amsterdam, NL"],
+          "notes": [
+            "6 échecs sur la fenêtre : volume compatible avec une attaque par force brute.",
+            "Une connexion a RÉUSSI après une série d'échecs : compromission possible."
+          ]
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": {
+          "total": 2, "malicious": 0, "suspicious": 0, "benign": 1, "unknown": 1,
+          "results": [
+            { "indicator": "77.42.130.18", "verdict": "benign" },
+            { "indicator": "45.87.212.9", "verdict": "unknown" }
+          ],
+          "notes": []
+        },
+        "get_directory_audits": { "total_entries": 0, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "suspicious", "escalate": false }
+    },
+
+    {
+      "id": "ADV-003",
+      "title": "Modification d'annuaire legitime par un administrateur au bureau",
+      "tags": ["identity", "faux-positif", "adversarial"],
+      "alert": { "kind": "escalade_privileges", "upn": "sarah.n@teknologiia.com" },
+      "tools": {
+        "get_directory_audits": {
+          "total_entries": 3, "sensitive_entries": 1,
+          "entries": [{ "security_note": "Attribution d'un rôle : élévation de privilèges possible." }]
+        },
+        "get_user_context": {
+          "user_principal_name": "sarah.n@teknologiia.com",
+          "is_privileged": true, "privileged_roles": ["User Administrator"],
+          "department": "SI", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 5, "window_hours": 48, "failures": 0, "successes": 5,
+          "distinct_ip_addresses": ["77.42.130.18"], "notes": []
+        },
+        "bulk_enrich": {
+          "total": 1, "malicious": 0, "suspicious": 0, "benign": 1,
+          "results": [{ "indicator": "77.42.130.18", "verdict": "benign" }], "notes": []
+        }
+      },
+      "expected": { "verdict": "benign", "escalate": false }
+    },
+
+    {
+      "id": "ADV-004",
+      "title": "Un seul indicateur malveillant, sans aucun autre signal",
+      "tags": ["identity", "intel", "adversarial", "ambigu"],
+      "alert": { "kind": "compte_compromis", "upn": "web@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "web@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Web", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 4, "window_hours": 48, "failures": 0, "successes": 4,
+          "distinct_ip_addresses": ["185.220.101.47"], "notes": []
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": {
+          "total": 1, "malicious": 1, "suspicious": 0, "benign": 0,
+          "results": [{ "indicator": "185.220.101.47", "verdict": "malicious" }], "notes": []
+        },
+        "get_directory_audits": { "total_entries": 0, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "suspicious", "escalate": false }
+    },
+
+    {
+      "id": "ADV-005",
+      "title": "Compte desactive avec activite recente : anomalie a ne pas manquer",
+      "tags": ["identity", "adversarial", "edge"],
+      "alert": { "kind": "compte_compromis", "upn": "old.contractor@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "old.contractor@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [],
+          "account_enabled": false, "user_type": "Guest", "department": null,
+          "notes": ["Le compte est désactivé : une activité récente serait anormale."]
+        },
+        "get_user_signins": {
+          "total_events": 6, "window_hours": 48, "failures": 5, "successes": 1,
+          "distinct_ip_addresses": ["45.87.212.9"], "notes": []
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": { "total": 1, "malicious": 0, "suspicious": 0, "benign": 0, "unknown": 1, "results": [], "notes": [] },
+        "get_directory_audits": { "total_entries": 0, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "suspicious", "escalate": false }
+    }
+  ]
+}

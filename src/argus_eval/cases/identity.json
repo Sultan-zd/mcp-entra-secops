@@ -1,0 +1,270 @@
+{
+  "_comment": "Jeu de reference — domaine identite. Chaque cas embarque les reponses d'outils qu'il doit voir : le verdict attendu reste donc valable dans six mois, quoi que publient les services externes.",
+  "cases": [
+    {
+      "id": "ID-001",
+      "title": "Compromission aboutie sur un compte privilegie",
+      "tags": ["identity", "intel", "brute-force"],
+      "alert": { "kind": "compte_compromis", "upn": "marketing@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "marketing@teknologiia.com",
+          "is_privileged": true,
+          "privileged_roles": ["Helpdesk Administrator"],
+          "department": "Marketing",
+          "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 10, "window_hours": 48, "failures": 7, "successes": 3,
+          "distinct_ip_addresses": ["185.220.101.47", "77.42.130.18"],
+          "notes": ["Une connexion a RÉUSSI après une série d'échecs : compromission possible."]
+        },
+        "get_risk_detections": {
+          "total_detections": 3,
+          "distinct_types": ["leakedCredentials", "anonymizedIPAddress", "unfamiliarFeatures"],
+          "detections": []
+        },
+        "bulk_enrich": {
+          "total": 2, "malicious": 1, "suspicious": 0, "benign": 1,
+          "results": [{ "indicator": "185.220.101.47", "verdict": "malicious" }],
+          "notes": []
+        },
+        "get_directory_audits": {
+          "total_entries": 5, "sensitive_entries": 4,
+          "entries": [{ "security_note": "Attribution d'un rôle" }]
+        }
+      },
+      "expected": { "verdict": "malicious", "severity": "critical", "escalate": true, "max_tool_calls": 6 }
+    },
+
+    {
+      "id": "ID-002",
+      "title": "Activite normale : aucun signal ne doit etre invente",
+      "tags": ["identity", "benign"],
+      "alert": { "kind": "compte_compromis", "upn": "sarah.n@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "sarah.n@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Finance", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 6, "window_hours": 48, "failures": 1, "successes": 5,
+          "distinct_ip_addresses": ["77.42.130.18"], "notes": []
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": { "total": 1, "malicious": 0, "suspicious": 0, "benign": 1, "results": [], "notes": [] },
+        "get_directory_audits": { "total_entries": 2, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "benign", "severity": "none", "escalate": false }
+    },
+
+    {
+      "id": "ID-003",
+      "title": "Attaque en cours mais non aboutie : ni benin, ni malveillant",
+      "tags": ["identity", "brute-force", "edge"],
+      "alert": { "kind": "compte_compromis", "upn": "compta@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "compta@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Comptabilité", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 9, "window_hours": 48, "failures": 9, "successes": 0,
+          "distinct_ip_addresses": ["203.0.113.77"], "notes": []
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": { "total": 1, "malicious": 0, "suspicious": 0, "benign": 1, "results": [], "notes": [] },
+        "get_directory_audits": { "total_entries": 0, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "suspicious", "escalate": false }
+    },
+
+    {
+      "id": "ID-004",
+      "title": "Meme attaque, mais sur un administrateur global",
+      "tags": ["identity", "privilege"],
+      "alert": { "kind": "compte_compromis", "upn": "admin@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "admin@teknologiia.com",
+          "is_privileged": true, "privileged_roles": ["Global Administrator"],
+          "department": "SI", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 9, "window_hours": 48, "failures": 9, "successes": 0,
+          "distinct_ip_addresses": ["203.0.113.77"], "notes": []
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": { "total": 1, "malicious": 0, "suspicious": 0, "benign": 1, "results": [], "notes": [] },
+        "get_directory_audits": { "total_entries": 0, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "suspicious", "severity": "high", "escalate": true }
+    },
+
+    {
+      "id": "ID-005",
+      "title": "Identifiants divulgues sans intrusion constatee",
+      "tags": ["identity", "leak"],
+      "alert": { "kind": "utilisateur_a_risque", "upn": "rh@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "rh@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "RH", "notes": []
+        },
+        "get_risk_detections": {
+          "total_detections": 1, "distinct_types": ["leakedCredentials"], "detections": []
+        },
+        "get_user_signins": {
+          "total_events": 4, "window_hours": 48, "failures": 0, "successes": 4,
+          "distinct_ip_addresses": ["77.42.130.18"], "notes": []
+        },
+        "bulk_enrich": { "total": 1, "malicious": 0, "suspicious": 0, "benign": 1, "results": [], "notes": [] }
+      },
+      "expected": { "verdict": "suspicious", "escalate": false }
+    },
+
+    {
+      "id": "ID-006",
+      "title": "Escalade de privileges : role attribue depuis une IP malveillante",
+      "tags": ["identity", "intel", "privilege"],
+      "alert": { "kind": "escalade_privileges", "upn": "stagiaire@teknologiia.com" },
+      "tools": {
+        "get_directory_audits": {
+          "total_entries": 4, "sensitive_entries": 2,
+          "entries": [{ "security_note": "Attribution d'un rôle : élévation de privilèges possible." }]
+        },
+        "get_user_context": {
+          "user_principal_name": "stagiaire@teknologiia.com",
+          "is_privileged": true, "privileged_roles": ["User Administrator"],
+          "department": "SI", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 8, "window_hours": 48, "failures": 6, "successes": 2,
+          "distinct_ip_addresses": ["185.220.101.47"], "notes": []
+        },
+        "bulk_enrich": {
+          "total": 1, "malicious": 1, "suspicious": 0, "benign": 0,
+          "results": [{ "indicator": "185.220.101.47", "verdict": "malicious" }], "notes": []
+        }
+      },
+      "expected": { "verdict": "malicious", "severity": "critical", "escalate": true }
+    },
+
+    {
+      "id": "ID-007",
+      "title": "Enrichissement indisponible : le verdict tient sur les domaines restants",
+      "tags": ["identity", "degradation"],
+      "alert": { "kind": "compte_compromis", "upn": "ventes@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "ventes@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Ventes", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 12, "window_hours": 48, "failures": 10, "successes": 2,
+          "distinct_ip_addresses": ["198.51.100.9"], "notes": []
+        },
+        "get_risk_detections": {
+          "total_detections": 1, "distinct_types": ["leakedCredentials"], "detections": []
+        },
+        "get_directory_audits": { "total_entries": 1, "sensitive_entries": 1, "entries": [{ "security_note": "MFA enrôlée" }] }
+      },
+      "expected": { "verdict": "malicious", "escalate": true }
+    },
+
+    {
+      "id": "ID-008",
+      "title": "Aucun outil ne repond : inconclusif, jamais benin",
+      "tags": ["identity", "degradation", "edge"],
+      "alert": { "kind": "compte_compromis", "upn": "inconnu@teknologiia.com" },
+      "tools": {},
+      "expected": { "verdict": "inconclusive", "escalate": true }
+    },
+
+    {
+      "id": "ID-009",
+      "title": "Scanner legitime : le renseignement ne doit pas declencher d'alerte",
+      "tags": ["identity", "intel", "benign", "faux-positif"],
+      "alert": { "kind": "compte_compromis", "upn": "web@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "web@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Web", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 3, "window_hours": 48, "failures": 0, "successes": 3,
+          "distinct_ip_addresses": ["162.142.125.13"], "notes": []
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": {
+          "total": 1, "malicious": 0, "suspicious": 0, "benign": 1,
+          "results": [{ "indicator": "162.142.125.13", "verdict": "benign" }], "notes": []
+        },
+        "get_directory_audits": { "total_entries": 0, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "benign", "escalate": false }
+    },
+
+    {
+      "id": "ID-010",
+      "title": "Protocole herite utilise : contournement de la MFA",
+      "tags": ["identity", "legacy"],
+      "alert": { "kind": "compte_compromis", "upn": "support@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "support@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Support", "notes": []
+        },
+        "get_user_signins": {
+          "total_events": 5, "window_hours": 48, "failures": 0, "successes": 5,
+          "distinct_ip_addresses": ["77.42.130.18"],
+          "notes": ["Protocoles d'authentification hérités utilisés (IMAP) : ils contournent la MFA."]
+        },
+        "get_risk_detections": { "total_detections": 0, "distinct_types": [], "detections": [] },
+        "bulk_enrich": { "total": 1, "malicious": 0, "suspicious": 0, "benign": 1, "results": [], "notes": [] },
+        "get_directory_audits": { "total_entries": 0, "sensitive_entries": 0, "entries": [] }
+      },
+      "expected": { "verdict": "benign", "escalate": false }
+    },
+
+    {
+      "id": "ID-011",
+      "title": "Comptes multiples signales a risque eleve",
+      "tags": ["identity", "tenant"],
+      "alert": { "kind": "usurpation_domaine", "domain": "teknologiia.com" },
+      "tools": {
+        "check_domain_posture": {
+          "domain": "teknologiia.com", "grade": "E", "score": 22,
+          "priority_actions": ["Passer DMARC de `p=none` à `p=quarantine`."]
+        },
+        "get_risky_users": { "total_users": 4, "high_risk": 3, "notes": [] }
+      },
+      "expected": { "verdict": "suspicious", "escalate": false }
+    },
+
+    {
+      "id": "ID-012",
+      "title": "Indicateur suspect sans confirmation ferme",
+      "tags": ["identity", "intel", "ambigu"],
+      "alert": { "kind": "utilisateur_a_risque", "upn": "mobile@teknologiia.com" },
+      "tools": {
+        "get_user_context": {
+          "user_principal_name": "mobile@teknologiia.com",
+          "is_privileged": false, "privileged_roles": [], "department": "Terrain", "notes": []
+        },
+        "get_risk_detections": {
+          "total_detections": 1, "distinct_types": ["impossibleTravel"], "detections": []
+        },
+        "get_user_signins": {
+          "total_events": 4, "window_hours": 48, "failures": 1, "successes": 3,
+          "distinct_ip_addresses": ["196.28.240.9"], "notes": []
+        },
+        "bulk_enrich": {
+          "total": 1, "malicious": 0, "suspicious": 1, "benign": 0,
+          "results": [{ "indicator": "196.28.240.9", "verdict": "suspicious" }], "notes": []
+        }
+      },
+      "expected": { "verdict": "benign", "escalate": false }
+    }
+  ]
+}

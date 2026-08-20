@@ -23,6 +23,7 @@ from .playbooks import Playbook
 POIDS = {
     "ioc_malveillant": 45,
     "succes_apres_echecs": 35,
+    "succes_apres_echecs_source_connue": 10,
     "echecs_repetes": 25,
     "message_usurpe": 40,
     "identifiants_divulgues": 25,
@@ -37,6 +38,30 @@ SEUIL_MALVEILLANT = 60
 SEUIL_SUSPECT = 25
 
 
+def _source_unique_et_connue(contexte: dict[str, Any]) -> bool:
+    """Toute l'activité vient-elle d'une seule source déjà jugée saine ?
+
+    Une compromission implique presque toujours une source nouvelle. Des échecs
+    suivis d'un succès depuis la SEULE adresse habituelle, sans la moindre
+    détection d'Identity Protection, est la signature d'un mot de passe oublié —
+    pas d'une intrusion.
+
+    Les trois conditions sont exigées ensemble, et l'enrichissement doit avoir
+    positivement qualifié l'adresse : un indicateur « inconnu » ne vaut pas un
+    indicateur « bénin », et ne doit donc pas atténuer quoi que ce soit.
+    """
+    signins = contexte.get("get_user_signins") or {}
+    enrichi = contexte.get("bulk_enrich") or {}
+    detections = contexte.get("get_risk_detections") or {}
+
+    source_unique = len(signins.get("distinct_ip_addresses") or []) == 1
+    total = enrichi.get("total") or 0
+    tout_benin = bool(total) and enrichi.get("benign") == total
+    aucune_detection = (detections.get("total_detections") or 0) == 0
+
+    return source_unique and tout_benin and aucune_detection
+
+
 def _signaux(contexte: dict[str, Any]) -> list[tuple[str, int, str]]:
     """Extrait les signaux exploitables du contexte, avec leur justification."""
     trouves: list[tuple[str, int, str]] = []
@@ -46,14 +71,26 @@ def _signaux(contexte: dict[str, Any]) -> list[tuple[str, int, str]]:
         echecs = signins.get("failures", 0)
         succes = signins.get("successes", 0)
         if echecs >= 5 and succes >= 1:
-            trouves.append(
-                (
-                    "succes_apres_echecs",
-                    POIDS["succes_apres_echecs"],
-                    f"{echecs} échecs d'authentification suivis de {succes} connexion(s) "
-                    "réussie(s) : motif caractéristique d'une compromission aboutie.",
+            if _source_unique_et_connue(contexte):
+                trouves.append(
+                    (
+                        "succes_apres_echecs_source_connue",
+                        POIDS["succes_apres_echecs_source_connue"],
+                        f"{echecs} échecs suivis de {succes} connexion(s) réussie(s), mais "
+                        "depuis la seule adresse habituelle du compte, déjà qualifiée saine, "
+                        "et sans aucune détection : motif d'un mot de passe oublié plutôt "
+                        "que d'une intrusion.",
+                    )
                 )
-            )
+            else:
+                trouves.append(
+                    (
+                        "succes_apres_echecs",
+                        POIDS["succes_apres_echecs"],
+                        f"{echecs} échecs d'authentification suivis de {succes} connexion(s) "
+                        "réussie(s) : motif caractéristique d'une compromission aboutie.",
+                    )
+                )
         elif echecs >= 5:
             # Une attaque qui n'a pas encore abouti reste une attaque. La
             # classer « bénigne » parce que l'attaquant a échoué reviendrait à

@@ -48,6 +48,24 @@ jobs:
           TI_DATA_SOURCE: fixture
           MAIL_DATA_SOURCE: fixture
 
+      # Le harnais d'évaluation est un garde-fou, pas un affichage : il sort
+      # en erreur dès qu'un seuil bloquant est dépassé. Les deux seuils qui
+      # arrêtent la chaîne portent sur les erreurs à coût asymétrique —
+      # laisser passer un incident réel, et se laisser manipuler par une
+      # donnée d'entrée.
+      - name: Évaluation de l'agent (jeu de référence)
+        run: argus-eval --verbose
+
+      - name: Conserver le rapport d'évaluation
+        if: always()
+        run: argus-eval --json > rapport-evaluation.json || true
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: evaluation-py${{ matrix.python }}
+          path: rapport-evaluation.json
+
   secrets:
     name: Recherche de secrets
     runs-on: ubuntu-latest
