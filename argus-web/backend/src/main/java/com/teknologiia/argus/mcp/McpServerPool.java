@@ -2,9 +2,11 @@ package com.teknologiia.argus.mcp;
 
 import io.modelcontextprotocol.client.McpClient;
 import io.modelcontextprotocol.client.McpSyncClient;
+import io.modelcontextprotocol.client.transport.HttpClientStreamableHttpTransport;
 import io.modelcontextprotocol.client.transport.ServerParameters;
 import io.modelcontextprotocol.client.transport.StdioClientTransport;
 import io.modelcontextprotocol.json.McpJsonDefaults;
+import io.modelcontextprotocol.spec.McpClientTransport;
 import io.modelcontextprotocol.spec.McpSchema;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -85,28 +87,9 @@ class McpServerPool implements AutoCloseable {
     }
 
     private McpSyncClient create() {
-        // L'environnement est HÉRITÉ puis complété. Ne transmettre que nos
-        // propres variables priverait Python de PATH et de SYSTEMROOT, et il ne
-        // démarrerait pas du tout sous Windows.
-        Map<String, String> env = new HashMap<>(System.getenv());
-        env.putAll(spec.getEnv());
-        // Les sorties des outils sont en français : sans cette variable, un
-        // accent suffit à faire échouer l'écriture sur la sortie standard de
-        // Python sous Windows.
-        env.putIfAbsent("PYTHONIOENCODING", "utf-8");
-
-        ServerParameters params = ServerParameters.builder(props.getPython())
-                .args("-m", spec.getModule())
-                .env(env)
-                .build();
-
-        StdioClientTransport transport =
-                new StdioClientTransport(params, McpJsonDefaults.getMapper());
-
-        // En transport stdio, stdout porte le protocole et stderr porte les
-        // journaux du serveur. On redirige ces derniers vers le journal Java
-        // plutôt que de les laisser se perdre.
-        transport.setStdErrorHandler(ligne -> log.debug("[mcp:{}] {}", name, ligne));
+        McpClientTransport transport = "http".equalsIgnoreCase(spec.getTransport())
+                ? transportDistant()
+                : transportLocal();
 
         McpSyncClient client = McpClient.sync(transport)
                 .clientInfo(new McpSchema.Implementation("argus-web", "ARGUS Web", "1.0.0"))
@@ -119,13 +102,55 @@ class McpServerPool implements AutoCloseable {
     }
 
     /**
+     * Serveur MCP distant, joint en HTTP.
+     *
+     * <p>Aucun processus a lancer : ni interpreteur a demarrer, ni tubes a
+     * surveiller. Le groupe reste utile malgre tout, une session MCP n'etant
+     * pas prevue pour porter plusieurs requetes de front.
+     */
+    private McpClientTransport transportDistant() {
+        return HttpClientStreamableHttpTransport.builder(spec.getUrl())
+                .endpoint(spec.getEndpoint())
+                .jsonMapper(McpJsonDefaults.getMapper())
+                .build();
+    }
+
+    private McpClientTransport transportLocal() {
+        // L'environnement est HÉRITÉ puis complété. Ne transmettre que nos
+        // propres variables priverait Python de PATH et de SYSTEMROOT, et il ne
+        // démarrerait pas du tout sous Windows.
+        Map<String, String> env = new HashMap<>(System.getenv());
+        env.putAll(spec.getEnv());
+        // Les sorties des outils sont en français : sans cette variable, un
+        // accent suffit à faire échouer l'écriture sur la sortie standard de
+        // Python sous Windows.
+        env.putIfAbsent("PYTHONIOENCODING", "utf-8");
+
+        // Un module Python est le cas courant ; une commande libre permet
+        // d'accueillir un serveur MCP ecrit dans n'importe quel langage.
+        ServerParameters params = spec.getCommand() != null && !spec.getCommand().isBlank()
+                ? ServerParameters.builder(spec.getCommand()).args(spec.getArgs()).env(env).build()
+                : ServerParameters.builder(props.getPython())
+                        .args("-m", spec.getModule()).env(env).build();
+
+        StdioClientTransport transport =
+                new StdioClientTransport(params, McpJsonDefaults.getMapper());
+
+        // En transport stdio, stdout porte le protocole et stderr porte les
+        // journaux du serveur. On redirige ces derniers vers le journal Java
+        // plutôt que de les laisser se perdre.
+        transport.setStdErrorHandler(ligne -> log.debug("[mcp:{}] {}", name, ligne));
+        return transport;
+    }
+
+    /**
      * Appelle un outil et rend sa sortie structurée.
      *
      * @throws McpToolException si l'outil est refusé, absent, en erreur, ou si
      *                          aucun processus n'est disponible
      */
     Map<String, Object> call(String tool, Map<String, Object> arguments) {
-        if (!allowedTools.contains(tool)) {
+        if (!autorise(tool)) {
             // Refus volontairement explicite : c'est une erreur de
             // configuration côté serveur, pas une saisie de l'utilisateur.
             throw new McpToolException(
@@ -134,6 +159,10 @@ class McpServerPool implements AutoCloseable {
         if (closed || all.isEmpty()) {
             throw new McpToolException(
                     "Le serveur d'analyse « " + name + " » n'est pas disponible.", false);
+        }
+
+        if (spec.isRemote()) {
+            RemoteArgumentGuard.verifier(tool, arguments);
         }
 
         McpSyncClient client = borrow();
@@ -163,6 +192,11 @@ class McpServerPool implements AutoCloseable {
                 remplacer(client);
             }
         }
+    }
+
+    /** Un outil expose, soit nomme, soit couvert par une ouverture explicite. */
+    private boolean autorise(String outil) {
+        return spec.isAllowAllTools() || allowedTools.contains(outil);
     }
 
     private McpSyncClient borrow() {
@@ -253,7 +287,7 @@ class McpServerPool implements AutoCloseable {
         McpSyncClient client = borrow();
         try {
             return client.listTools().tools().stream()
-                    .filter(t -> allowedTools.contains(t.name()))
+                    .filter(t -> autorise(t.name()))
                     .toList();
         } catch (Exception e) {
             throw new McpToolException(
@@ -273,6 +307,19 @@ class McpServerPool implements AutoCloseable {
 
     Set<String> getAllowedTools() {
         return allowedTools;
+    }
+
+    /** Vrai si ce serveur porte cet outil, pour le routage par nom. */
+    boolean porte(String outil) {
+        return autorise(outil);
+    }
+
+    boolean isRemote() {
+        return spec.isRemote();
+    }
+
+    String getLabel() {
+        return spec.getLabel() != null ? spec.getLabel() : name;
     }
 
     @Override

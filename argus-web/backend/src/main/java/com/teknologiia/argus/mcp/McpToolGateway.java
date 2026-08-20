@@ -78,7 +78,7 @@ public class McpToolGateway implements AutoCloseable {
      */
     public Map<String, Object> callByName(String outil, Map<String, Object> arguments) {
         for (McpServerPool pool : pools.values()) {
-            if (pool.getAllowedTools().contains(outil)) {
+            if (pool.porte(outil)) {
                 return pool.call(outil, arguments);
             }
         }

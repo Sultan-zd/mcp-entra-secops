@@ -154,14 +154,29 @@ public class ChatController {
         if (e instanceof FluxFerme) {
             return "Conversation interrompue.";
         }
-        if (e instanceof AnthropicServiceException service) {
-            return switch (service.statusCode()) {
+        // Les deux familles de fournisseurs remontent leur panne differemment,
+        // mais le code HTTP dit la meme chose des deux cotes.
+        int statut = switch (e) {
+            case AnthropicServiceException service -> service.statusCode();
+            case LlmHttp.LlmHttpException http -> http.statusCode();
+            default -> 0;
+        };
+        // Google repond 400 INVALID_ARGUMENT la ou les autres repondent 401.
+        // Sans ce cas, une cle invalide chez Gemini s'annoncait « la demande a
+        // ete refusee », ce qui n'aide personne.
+        if (e instanceof LlmHttp.LlmHttpException http
+                && statut == 400
+                && ("INVALID_ARGUMENT".equals(http.motif()) || "UNAUTHENTICATED".equals(http.motif()))) {
+            return "Cette cle d'API a ete refusee. Verifiez-la aupres du fournisseur.";
+        }
+        if (statut > 0) {
+            return switch (statut) {
                 case 401 -> "Cette cle d'API a ete refusee. Verifiez-la aupres du fournisseur.";
                 case 403 -> "Cette cle n'a pas le droit d'utiliser ce modele.";
                 case 404 -> "Ce modele n'existe pas ou n'est pas accessible avec cette cle.";
                 case 429 -> "Le fournisseur a limite votre cle. Patientez avant de reessayer.";
                 case 400, 422 -> "La demande a ete refusee par le fournisseur.";
-                default -> service.statusCode() >= 500
+                default -> statut >= 500
                         ? "Le fournisseur rencontre un incident. Reessayez plus tard."
                         : "L'investigation n'a pas abouti.";
             };

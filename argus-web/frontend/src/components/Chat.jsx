@@ -26,8 +26,8 @@ const MODELE_STOCKAGE = 'argus.model'
 
 const EXEMPLES = [
   'Le domaine teknologiia.com peut-il être usurpé ?',
-  'Compare la protection de microsoft.com et de github.com.',
-  'Pourquoi github.com est-il à la limite des 10 résolutions SPF ?',
+  'La CVE-2021-44228 est-elle activement exploitée ?',
+  'Fais un audit complet de github.com : DNS, SSL, messagerie.',
 ]
 
 function Outil({ appel }) {
@@ -55,6 +55,7 @@ export default function Chat() {
   const [cleVisible, setCleVisible] = useState(false)
   const [outils, setOutils] = useState([])
   const [panneauOuvert, setPanneauOuvert] = useState(true)
+  const [outilsOuverts, setOutilsOuverts] = useState(false)
 
   const [messages, setMessages] = useState([])
   const [saisie, setSaisie] = useState('')
@@ -199,10 +200,15 @@ export default function Chat() {
           <ChevronDown size={14} aria-hidden="true" />
         </button>
         {outils.length > 0 && (
-          <span className="compte-outils">
+          <button
+            type="button"
+            className="compte-outils"
+            onClick={() => setOutilsOuverts((o) => !o)}
+            aria-expanded={outilsOuverts}
+          >
             <Wrench size={13} aria-hidden="true" />
-            {outils.length} outils disponibles
-          </span>
+            {outils.length} outils
+          </button>
         )}
       </div>
 
@@ -284,6 +290,24 @@ export default function Chat() {
               </button>
             )}
           </div>
+        </div>
+      )}
+
+      {outilsOuverts && (
+        <div className="catalogue">
+          <p>
+            Le modèle choisit lui-même parmi ces outils. Ceux marqués
+            <span className="pastille-distant">distant</span> interrogent un service
+            tiers : ARGUS n'y envoie jamais une adresse interne.
+          </p>
+          <ul>
+            {outils.map((o) => (
+              <li key={o.name}>
+                <code>{o.name}</code>
+                <span>{o.description}</span>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
 

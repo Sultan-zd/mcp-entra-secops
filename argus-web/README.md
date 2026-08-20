@@ -44,6 +44,56 @@ secrets de ses visiteurs.
 
 ---
 
+### Les modèles pris en charge
+
+| Fournisseur | Modèles | Implémentation |
+|---|---|---|
+| **Claude** (Anthropic) | Opus 5, Sonnet 5, Haiku 4.5 | SDK officiel `anthropic-java` |
+| **ChatGPT** (OpenAI) | GPT-5.2, 5.1, 4.1 | API compatible OpenAI |
+| **Gemini** (Google) | 2.5 Pro, 2.5 Flash, 2.0 Flash | API Gemini |
+| **Mistral**, **DeepSeek**, **Groq** | — | API compatible OpenAI |
+
+Claude garde son SDK officiel : il est seul de sa forme. Les autres passent par
+une **implémentation unique**, parce que « `/v1/chat/completions` » est devenu
+le standard de fait — ajouter Ollama en local ou un nouveau fournisseur revient
+à cinq lignes de configuration.
+
+Faire cohabiter trois SDK aurait signifié trois systèmes de types à traduire
+vers la même boucle, et les dépendances transitives de l'un (protobuf, guava)
+en conflit avec Spring Boot.
+
+### Les serveurs d'outils
+
+| Serveur | Outils | Transport | Clé |
+|---|---|---|---|
+| **Messagerie ARGUS** | 5 — SPF, DKIM, DMARC, en-têtes, posture | stdio (Python local) | aucune |
+| **ContrastAPI** | 55 — CVE/KEV, MITRE ATT&CK/ATLAS/D3FEND, Sigma, DNS/SSL/WHOIS, réputation | HTTP distant | aucune |
+
+**60 outils au total, tous sans clé.** Ceux qui en exigent une — VirusTotal,
+AbuseIPDB, Microsoft Entra — viendront derrière un compte.
+
+ContrastAPI est joint **directement en HTTP** depuis Java, sans passer par
+`npx mcp-remote` : le SDK MCP Java sait parler Streamable HTTP, ce qui évite un
+processus Node et un téléchargement à chaque démarrage.
+
+### Une adresse interne ne part jamais vers un tiers
+
+ARGUS tient cette règle depuis le premier jour, et elle vivait côté Python.
+Brancher un serveur MCP **distant** la contournait : ses outils acceptent
+volontiers `10.0.0.5`, et l'envoyer révélerait la topologie du réseau interne
+à un service qui n'en a que faire.
+
+Le contrôle est donc rejoué en Java, sur les arguments, avant qu'ils ne quittent
+la machine — et seulement pour les serveurs déclarés distants. Il attrape les
+adresses privées, de bouclage et lien-local, les noms internes (`.local`,
+`.corp`, `localhost`…), l'hôte extrait d'une URL ou d'une adresse de courriel,
+et les valeurs cachées au fond d'une liste ou d'un objet imbriqué.
+
+**25 tests** le vérifient, dont 8 qui s'assurent qu'un garde-fou trop large ne
+rend pas les 55 outils distants inutilisables.
+
+---
+
 Deux étages, découpés selon ce que chaque outil exige réellement :
 
 | Étage | Outils | Condition d'accès |

@@ -379,3 +379,66 @@
 .saisie .stop {
   background: var(--danger);
 }
+
+/* -------------------------------------------------------------- catalogue */
+.compte-outils {
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+}
+
+.compte-outils:hover {
+  color: var(--accent-strong);
+}
+
+.catalogue {
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0.9rem 1rem;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+.catalogue > p {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  max-width: none;
+  margin-bottom: 0.7rem;
+}
+
+.pastille-distant {
+  display: inline-block;
+  margin: 0 0.3rem;
+  padding: 0.05rem 0.4rem;
+  border-radius: 999px;
+  background: var(--warning-bg);
+  color: var(--warning);
+  font-size: 0.72rem;
+}
+
+.catalogue ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.catalogue li {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.catalogue code {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--accent-strong);
+}
+
+.catalogue li span {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+}

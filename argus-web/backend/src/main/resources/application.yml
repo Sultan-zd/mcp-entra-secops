@@ -38,6 +38,8 @@ argus:
 
     servers:
       email:
+        label: Messagerie ARGUS
+        transport: stdio
         module: email_security_mcp
         env:
           MAIL_DATA_SOURCE: live
@@ -49,6 +51,23 @@ argus:
           - check_dmarc
           - check_dkim
           - analyze_email_headers
+
+      # Serveur MCP tiers, sans clé : 55 outils de renseignement sur les
+      # vulnérabilités, MITRE, Sigma, DNS/SSL et réputation.
+      #
+      # Il est DISTANT : les arguments sont filtrés avant de partir. Une
+      # adresse interne envoyée à un service de réputation ne rend rien
+      # d'utile et révélerait la topologie du réseau — la règle qu'ARGUS
+      # applique déjà côté Python est rejouée ici.
+      contrast:
+        label: ContrastAPI
+        transport: http
+        url: https://api.contrastcyber.com
+        endpoint: /mcp/
+        remote: true
+        # Cinquante-cinq outils : la liste nominative serait impraticable.
+        # L'ouverture reste une décision explicite, pas un défaut.
+        allow-all-tools: true
 
 logging:
   level:

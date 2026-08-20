@@ -51,8 +51,45 @@ public class McpProperties {
 
     public static class Server {
 
-        /** Module Python à lancer, passé à {@code python -m}. */
+        /** {@code stdio} pour un processus local, {@code http} pour un serveur distant. */
+        private String transport = "stdio";
+
+        /** Module Python à lancer, passé à {@code python -m}. Transport stdio. */
         private String module;
+
+        /** Commande arbitraire, si le serveur n'est pas un module Python. */
+        private String command;
+
+        /** Arguments de {@link #command}. */
+        private List<String> args = List.of();
+
+        /** Racine du serveur distant, par exemple {@code https://exemple.com}. */
+        private String url;
+
+        /** Chemin du point d'entrée MCP sur ce serveur. */
+        private String endpoint = "/mcp";
+
+        /**
+         * Serveur tiers, hors de notre controle.
+         *
+         * <p>Les arguments qui partent vers lui sont filtres : une adresse
+         * interne envoyee a un service de reputation ne rend rien d'utile et
+         * revele la topologie du reseau.
+         */
+        private boolean remote;
+
+        /**
+         * Expose tous les outils annonces par ce serveur.
+         *
+         * <p>Doit etre demande explicitement. Un serveur qui en publie
+         * cinquante-cinq rend la liste nominative impraticable, mais laisser
+         * l'ouverture par defaut ferait entrer n'importe quel outil ajoute en
+         * amont sans que personne ne l'ait decide.
+         */
+        private boolean allowAllTools;
+
+        /** Libelle affiche a l'utilisateur. */
+        private String label;
 
         /** Variables d'environnement ajoutées à celles héritées. */
         private Map<String, String> env = new LinkedHashMap<>();
@@ -67,12 +104,76 @@ public class McpProperties {
          */
         private List<String> allowedTools = List.of();
 
+        public String getTransport() {
+            return transport;
+        }
+
+        public void setTransport(String transport) {
+            this.transport = transport;
+        }
+
         public String getModule() {
             return module;
         }
 
         public void setModule(String module) {
             this.module = module;
+        }
+
+        public String getCommand() {
+            return command;
+        }
+
+        public void setCommand(String command) {
+            this.command = command;
+        }
+
+        public List<String> getArgs() {
+            return args;
+        }
+
+        public void setArgs(List<String> args) {
+            this.args = args;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        public String getEndpoint() {
+            return endpoint;
+        }
+
+        public void setEndpoint(String endpoint) {
+            this.endpoint = endpoint;
+        }
+
+        public boolean isRemote() {
+            return remote;
+        }
+
+        public void setRemote(boolean remote) {
+            this.remote = remote;
+        }
+
+        public boolean isAllowAllTools() {
+            return allowAllTools;
+        }
+
+        public void setAllowAllTools(boolean allowAllTools) {
+            this.allowAllTools = allowAllTools;
+        }
+
+        public String getLabel() {
+            return label;
+        }
+
+        public void setLabel(String label) {
+            this.label = label;
         }
 
         public Map<String, String> getEnv() {
