@@ -111,8 +111,7 @@ def test_dkim_signe_par_un_autre_domaine() -> None:
         From="alice@teknologiia.com",
         Return_Path="<alice@teknologiia.com>",
         Authentication_Results=(
-            "mx; spf=pass smtp.mailfrom=teknologiia.com; "
-            "dkim=pass header.d=prestataire.example"
+            "mx; spf=pass smtp.mailfrom=teknologiia.com; dkim=pass header.d=prestataire.example"
         ),
     )
 

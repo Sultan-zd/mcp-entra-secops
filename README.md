@@ -14,6 +14,7 @@ client MCP).
 | `entra-secops-mcp` | Identité — journaux Microsoft Entra ID | 6 |
 | `threat-intel-mcp` | Renseignement — VirusTotal, AbuseIPDB, GreyNoise | 4 |
 | `email-security-mcp` | Messagerie — SPF, DKIM, DMARC, en-têtes | 5 |
+| `argus-agent` | **Orchestration** — enchaîne les trois domaines | — |
 
 Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
@@ -139,7 +140,7 @@ les trames JSON.
 ## Développement
 
 ```bash
-pytest              # 232 tests
+pytest              # 253 tests
 ruff check src tests
 mypy src            # mode strict
 pre-commit install  # contrôles avant chaque commit
@@ -151,7 +152,7 @@ python demo.py      # investigation de démonstration
 | | |
 |---|---|
 | Outils | 15 au total (6 identité + 4 renseignement + 5 messagerie), tous en lecture seule |
-| Tests | 232, sans clé ni tenant requis |
+| Tests | 253, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
 | Conteneur | vérifié via un vrai client MCP : démarrage 2,4 s, appel d'outil ~110 ms |
@@ -278,3 +279,52 @@ indicateurs à enrichir : ['185.220.101.47', 'envoi-malveillant.xyz']
 
 Le champ `indicators` alimente directement `bulk_enrich` du serveur de
 renseignement : les trois serveurs s'enchaînent.
+
+---
+
+## L'agent de triage
+
+```bash
+argus-agent                    # investigation de démonstration
+argus-agent --alert x.json     # depuis une alerte réelle
+argus-agent --json             # verdict structuré, pour une intégration
+```
+
+L'agent reçoit une alerte, choisit un playbook, enchaîne les outils des trois
+serveurs et rend un dossier instruit — en **11 ms** sur le scénario de
+démonstration.
+
+```
+✓ [1] get_user_context        Compte PRIVILÉGIÉ : Helpdesk Administrator
+✓ [2] get_user_signins        10 connexions sur 48 h — 7 échecs, 3 succès
+✓ [3] get_risk_detections     3 détections : anonymizedIPAddress, leakedCredentials…
+✓ [4] bulk_enrich             2 indicateurs — 1 malveillant
+✓ [5] get_directory_audits    5 modifications, dont 4 sensibles
+
+VERDICT : MALICIOUS   gravité critical   confiance 0.95
+→ ESCALADE VERS UN ANALYSTE
+```
+
+### Trois décisions de conception
+
+**La séquence et le verdict sont déterministes.** Aucun modèle de langage dans
+la boucle de décision. Le verdict devient donc reproductible — condition d'un
+jeu d'évaluation — et aucune donnée contrôlée par un attaquant ne peut
+l'infléchir. Un modèle reste utile en surcouche, pour rédiger et traiter les cas
+non couverts ; il s'ajoute à cette base plutôt que de la remplacer.
+
+**Les playbooks sont des données, pas du code.** Un analyste qui n'écrit pas de
+Python peut les relire et les corriger. La séquence devient comparable entre
+deux exécutions, donc mesurable.
+
+**L'agent propose, l'humain décide.** Aucune action de remédiation n'est
+exécutée. Un compte privilégié déclenche systématiquement une escalade, quel que
+soit le score : l'impact d'une erreur y est trop élevé pour une décision
+automatique.
+
+### Le point de jonction
+
+Les adresses IP relevées dans les journaux d'identité — ou extraites d'un
+en-tête de courriel — alimentent automatiquement l'enrichissement. C'est ce qui
+distingue une plateforme de trois outils juxtaposés, et un test le vérifie
+explicitement.

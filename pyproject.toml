@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "argus-secops"
-version = "0.3.0"
+version = "0.4.0"
 description = "Plateforme SecOps agentique : serveurs MCP d'identité, de renseignement sur les menaces et de sécurité de la messagerie"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -42,9 +42,15 @@ dev = [
 entra-secops-mcp = "entra_secops_mcp.__main__:main"
 threat-intel-mcp = "threat_intel_mcp.__main__:main"
 email-security-mcp = "email_security_mcp.__main__:main"
+argus-agent = "argus_agent.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/entra_secops_mcp", "src/threat_intel_mcp", "src/email_security_mcp"]
+packages = [
+    "src/entra_secops_mcp",
+    "src/threat_intel_mcp",
+    "src/email_security_mcp",
+    "src/argus_agent",
+]
 
 # ---------------------------------------------------------------------------
 [tool.ruff]
