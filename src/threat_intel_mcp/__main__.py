@@ -76,8 +76,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         prog="threat-intel-mcp",
         description=(
-            "Serveur MCP de renseignement sur les menaces "
-            "(VirusTotal, AbuseIPDB, GreyNoise)."
+            "Serveur MCP de renseignement sur les menaces (VirusTotal, AbuseIPDB, GreyNoise)."
         ),
     )
     parser.add_argument(

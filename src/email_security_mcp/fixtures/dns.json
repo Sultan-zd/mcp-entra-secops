@@ -1,0 +1,121 @@
+{
+  "_comment": "Zones DNS de DEMONSTRATION, actives quand MAIL_DATA_SOURCE=fixture. Trois profils : teknologiia.com (posture defaillante, SPF au-dela du plafond), bonne-pratique.example (posture exemplaire), et les domaines includes necessaires a l'evaluation recursive du SPF.",
+  "zones": {
+    "teknologiia.com": {
+      "TXT": [
+        "v=spf1 include:spf.protection.outlook.com include:_spf.google.com include:servers.mcsv.net include:sendgrid.net include:_spf.salesforce.com include:mail.zendesk.com ~all",
+        "MS=ms12345678"
+      ],
+      "MX": [
+        "teknologiia-com.mail.protection.outlook.com"
+      ]
+    },
+    "_dmarc.teknologiia.com": {
+      "TXT": [
+        "v=DMARC1; p=none; rua=mailto:dmarc@teknologiia.com; pct=100"
+      ]
+    },
+    "selector1._domainkey.teknologiia.com": {
+      "TXT": [
+        "v=DKIM1; k=rsa; t=y; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQDdlatRjRjogo3WojgGHFHYLugdUWAY9iR3fy4arWNA1KoS8kVw33cJibXr8bvwUAUparCwlvdbH6dvhkY9iHZ5nQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAECAwEAAQ=="
+      ]
+    },
+    "bonne-pratique.example": {
+      "TXT": [
+        "v=spf1 ip4:203.0.113.0/24 include:spf.protection.outlook.com -all"
+      ],
+      "MX": [
+        "mail.bonne-pratique.example"
+      ]
+    },
+    "_dmarc.bonne-pratique.example": {
+      "TXT": [
+        "v=DMARC1; p=reject; sp=reject; adkim=s; aspf=s; pct=100; rua=mailto:dmarc@bonne-pratique.example"
+      ]
+    },
+    "selector1._domainkey.bonne-pratique.example": {
+      "TXT": [
+        "v=DKIM1; k=rsa; p=MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAvzZ8kQaP1nT7yQ2mL4xVhJ8dR3cW6bN9pK5sT1uY0vX2eG7hA4iC9jD8fE3gH6kM2nP5qR7sT9uV1wX3yZ4aB6cD8eF0gH2iJ4kL6mN8oP0qR2sT4uV6wX8yZ0aB2cD4eF6gH8iJ0kL2mN4oP6qR8sT0uV2wX4yZ6aB8cD0eF2gH4iJ6kL8mN0oP2qR4sT6uV8wX0yZ2aB4cD6eF8gH0iJ2kL4mN6oP8qR0sT2uV4wX6yZ8aB0cD2eF4gH6iJ8kL0mN2oP4qR6sT8uV0wX2yZ4aB6cD8eF0gH2iJ4kL6mN8oP0qR2sT4uV6wX8yZQIDAQAB"
+      ]
+    },
+    "sans-protection.example": {
+      "TXT": [],
+      "MX": [
+        "mail.sans-protection.example"
+      ]
+    },
+    "spf.protection.outlook.com": {
+      "TXT": [
+        "v=spf1 ip4:40.92.0.0/15 ip4:40.107.0.0/16 ip4:52.100.0.0/14 include:spfd.protection.outlook.com -all"
+      ]
+    },
+    "spfd.protection.outlook.com": {
+      "TXT": [
+        "v=spf1 ip4:51.4.72.0/24 ip4:51.5.72.0/24 -all"
+      ]
+    },
+    "_spf.google.com": {
+      "TXT": [
+        "v=spf1 include:_netblocks.google.com include:_netblocks2.google.com include:_netblocks3.google.com ~all"
+      ]
+    },
+    "_netblocks.google.com": {
+      "TXT": [
+        "v=spf1 ip4:35.190.247.0/24 ~all"
+      ]
+    },
+    "_netblocks2.google.com": {
+      "TXT": [
+        "v=spf1 ip6:2001:4860:4000::/36 ~all"
+      ]
+    },
+    "_netblocks3.google.com": {
+      "TXT": [
+        "v=spf1 ip4:172.217.0.0/19 ~all"
+      ]
+    },
+    "servers.mcsv.net": {
+      "TXT": [
+        "v=spf1 ip4:205.201.128.0/20 ?all"
+      ]
+    },
+    "sendgrid.net": {
+      "TXT": [
+        "v=spf1 ip4:167.89.0.0/17 ip4:168.245.0.0/17 ~all"
+      ]
+    },
+    "_spf.salesforce.com": {
+      "TXT": [
+        "v=spf1 ip4:13.108.0.0/14 ~all"
+      ]
+    },
+    "mail.zendesk.com": {
+      "TXT": [
+        "v=spf1 ip4:192.161.144.0/20 ~all"
+      ]
+    },
+    "trop-d-includes.example": {
+      "TXT": [
+        "v=spf1 include:spf.protection.outlook.com include:_spf.google.com include:servers.mcsv.net include:sendgrid.net include:_spf.salesforce.com include:mail.zendesk.com include:_spf.hubspot.com include:mktomail.com -all"
+      ],
+      "MX": [
+        "mail.trop-d-includes.example"
+      ]
+    },
+    "_dmarc.trop-d-includes.example": {
+      "TXT": [
+        "v=DMARC1; p=reject; pct=20; rua=mailto:d@trop-d-includes.example"
+      ]
+    },
+    "_spf.hubspot.com": {
+      "TXT": [
+        "v=spf1 ip4:23.251.128.0/17 ~all"
+      ]
+    },
+    "mktomail.com": {
+      "TXT": [
+        "v=spf1 ip4:94.75.0.0/17 ~all"
+      ]
+    }
+  }
+}

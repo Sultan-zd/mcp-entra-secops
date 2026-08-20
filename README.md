@@ -13,6 +13,7 @@ client MCP).
 |---|---|---|
 | `entra-secops-mcp` | Identité — journaux Microsoft Entra ID | 6 |
 | `threat-intel-mcp` | Renseignement — VirusTotal, AbuseIPDB, GreyNoise | 4 |
+| `email-security-mcp` | Messagerie — SPF, DKIM, DMARC, en-têtes | 5 |
 
 Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
@@ -138,7 +139,7 @@ les trames JSON.
 ## Développement
 
 ```bash
-pytest              # 180 tests
+pytest              # 232 tests
 ruff check src tests
 mypy src            # mode strict
 pre-commit install  # contrôles avant chaque commit
@@ -149,8 +150,8 @@ python demo.py      # investigation de démonstration
 
 | | |
 |---|---|
-| Outils | 10 au total (6 identité + 4 renseignement), tous en lecture seule |
-| Tests | 180, sans clé ni tenant requis |
+| Outils | 15 au total (6 identité + 4 renseignement + 5 messagerie), tous en lecture seule |
+| Tests | 232, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
 | Conteneur | vérifié via un vrai client MCP : démarrage 2,4 s, appel d'outil ~110 ms |
@@ -217,3 +218,63 @@ sortie Tor. Les deux serveurs racontent la même histoire.
 ## Licence
 
 MIT — voir [LICENSE](LICENSE).
+
+---
+
+## Serveur de sécurité de la messagerie
+
+```bash
+email-security-mcp --check teknologiia.com
+```
+
+Cinq outils : `check_domain_posture`, `check_spf`, `check_dkim`, `check_dmarc`,
+`analyze_email_headers`. **Aucune clé d'API** : tout est publié dans le DNS.
+
+### Le comptage des résolutions DNS de SPF
+
+La RFC 7208 plafonne à **10** le nombre de résolutions DNS qu'une évaluation SPF
+peut déclencher. Au-delà, elle renvoie `permerror` et **SPF cesse de protéger le
+domaine** — alors que l'enregistrement paraît parfaitement correct dans le
+portail DNS.
+
+C'est la panne la plus fréquente et la plus silencieuse du domaine : une
+organisation ajoute Microsoft 365, puis un outil d'emailing, puis un CRM, chacun
+avec son `include:`, et franchit la limite sans aucun signal.
+
+Vérifié sur des domaines réels :
+
+```
+microsoft.com   note A (92/100)   SPF  7/10 lookups   DMARC reject
+github.com      note C (60/100)   SPF 10/10 lookups   DMARC quarantine
+```
+
+`github.com` est **exactement à la limite** : 8 `include:` de premier niveau
+plus 2 imbriqués. L'ajout d'un seul prestataire d'envoi ferait basculer son SPF
+en `permerror`.
+
+### Les trois pièges signalés explicitement
+
+| Piège | Pourquoi c'est trompeur |
+|---|---|
+| SPF au-delà de 10 résolutions | L'enregistrement paraît correct, il ne protège plus |
+| DMARC `p=none` | Mode d'observation : rien n'est bloqué |
+| DMARC `pct=20` | La politique la plus stricte, appliquée à 20 % du trafic |
+| DKIM `t=y` | Demande aux destinataires d'**ignorer** les échecs |
+
+### Analyse d'en-têtes : l'alignement
+
+SPF valide le `Return-Path:` (l'enveloppe), **pas le `From:`** affiché à
+l'utilisateur. Un attaquant met l'adresse de sa cible dans `From:` et la sienne
+dans `Return-Path:` : SPF passe, et le message paraît authentique.
+
+```
+verdict     spoofed | gravité high
+DÉSALIGNEMENT : l'adresse affichée est en « teknologiia.com » mais l'enveloppe
+d'envoi est en « envoi-malveillant.xyz ». SPF valide l'enveloppe, pas l'adresse
+affichée : un `spf=pass` ne prouve donc RIEN sur l'expéditeur visible.
+
+indicateurs à enrichir : ['185.220.101.47', 'envoi-malveillant.xyz']
+```
+
+Le champ `indicators` alimente directement `bulk_enrich` du serveur de
+renseignement : les trois serveurs s'enchaînent.

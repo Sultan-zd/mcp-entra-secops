@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "argus-secops"
-version = "0.2.0"
-description = "Plateforme SecOps agentique : serveurs MCP d'identité et de renseignement sur les menaces"
+version = "0.3.0"
+description = "Plateforme SecOps agentique : serveurs MCP d'identité, de renseignement sur les menaces et de sécurité de la messagerie"
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -21,6 +21,8 @@ dependencies = [
     "aiohttp>=3.10",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    # Resolution DNS asynchrone : SPF, DKIM et DMARC sont publies dans le DNS.
+    "dnspython>=2.7",
 ]
 
 [project.optional-dependencies]
@@ -39,9 +41,10 @@ dev = [
 [project.scripts]
 entra-secops-mcp = "entra_secops_mcp.__main__:main"
 threat-intel-mcp = "threat_intel_mcp.__main__:main"
+email-security-mcp = "email_security_mcp.__main__:main"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/entra_secops_mcp", "src/threat_intel_mcp"]
+packages = ["src/entra_secops_mcp", "src/threat_intel_mcp", "src/email_security_mcp"]
 
 # ---------------------------------------------------------------------------
 [tool.ruff]
@@ -65,7 +68,7 @@ disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["mcp.*", "azure.*", "redis.*"]
+module = ["mcp.*", "azure.*", "redis.*", "dns.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------

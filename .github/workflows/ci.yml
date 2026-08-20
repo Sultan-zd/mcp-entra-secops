@@ -46,6 +46,7 @@ jobs:
           # hermétique et n'atteint jamais le réseau.
           ENTRA_DATA_SOURCE: fixture
           TI_DATA_SOURCE: fixture
+          MAIL_DATA_SOURCE: fixture
 
   secrets:
     name: Recherche de secrets
