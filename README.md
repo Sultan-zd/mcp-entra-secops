@@ -16,6 +16,7 @@ client MCP).
 | `email-security-mcp` | Messagerie — SPF, DKIM, DMARC, en-têtes | 5 |
 | `argus-agent` | **Orchestration** — enchaîne les trois domaines | — |
 | `argus-eval` | **Évaluation** — 25 incidents de référence, seuils bloquants | — |
+| `argus-console` | **Console analyste** — investigation en direct, porte d'approbation | — |
 
 Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
@@ -141,7 +142,7 @@ les trames JSON.
 ## Développement
 
 ```bash
-pytest              # 271 tests
+pytest              # 288 tests
 ruff check src tests
 mypy src            # mode strict
 pre-commit install  # contrôles avant chaque commit
@@ -153,7 +154,7 @@ python demo.py      # investigation de démonstration
 | | |
 |---|---|
 | Outils | 15 au total (6 identité + 4 renseignement + 5 messagerie), tous en lecture seule |
-| Tests | 271, sans clé ni tenant requis |
+| Tests | 288, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
 | Conteneur | vérifié via un vrai client MCP : démarrage 2,4 s, appel d'outil ~110 ms |
@@ -386,3 +387,84 @@ positivement qualifiée bénigne, et zéro détection — et quatre tests vérif
 que retirer n'importe laquelle rétablit le signal fort. Un correctif de faux
 positif trop généreux introduirait un faux négatif : c'est précisément ce que
 le seuil bloquant interdit.
+
+---
+
+## La console analyste
+
+```bash
+pip install -e ".[console]"
+argus-console                    # http://127.0.0.1:8000
+```
+
+Une investigation qu'on ne voit pas se dérouler n'est pas adoptée. La console
+diffuse **chaque étape au moment où elle se termine**, par un flux d'événements
+serveur, plutôt qu'un sablier suivi d'un verdict :
+
+```
+event: step     get_user_context      compte privilégié — Global Administrator
+event: step     get_user_signins      10 connexions sur 48 h — 7 échecs, 3 succès
+event: step     get_risk_detections   3 détections
+event: step     bulk_enrich           2 indicateurs — 1 malveillant
+event: step     get_directory_audits  5 modifications, dont 4 sensibles
+event: verdict  MALICIOUS · critical · 0.95 · escalade
+```
+
+Un flux d'événements serveur suffit : la communication est unidirectionnelle,
+du serveur vers le navigateur. Une WebSocket serait surdimensionnée, et le
+navigateur qui ferme l'onglet annule la tâche côté serveur — sans quoi une
+investigation abandonnée continuerait de consommer du quota d'API.
+
+### La porte d'approbation consigne, elle n'exécute pas
+
+```
+POST /api/runs/{id}/approvals  →  {"executed": false, "recorded": {...}}
+```
+
+La distinction est délibérée. Tant que la plateforme ne détient **aucun droit
+d'écriture** sur le tenant, une erreur de l'agent ne peut pas se traduire en
+incident. Ce que l'API enregistre, c'est qui a décidé quoi et quand — l'exigence
+d'audit — pas l'exécution elle-même.
+
+Deux refus explicites protègent la trace :
+
+- approuver une action **jamais proposée** est rejeté (`400`) : elle n'aurait
+  aucune trace d'origine dans le dossier ;
+- une décision autre que `approved` / `rejected` est rejetée.
+
+---
+
+## Observabilité : ce qu'une investigation coûte réellement
+
+La plupart des plateformes agentiques comptent des tokens, parce qu'un modèle de
+langage est dans leur boucle de décision. **Ici il n'y en a pas.** Le coût réel
+n'est donc pas en tokens : il est en **quota d'API externes**. Le palier gratuit
+de VirusTotal tourne autour de quatre requêtes par minute — c'est cette
+ressource-là qui s'épuise, et c'est donc celle-là qu'on mesure. Compter des
+tokens inexistants donnerait un tableau de bord flatteur et sans rapport avec la
+contrainte réelle.
+
+```json
+{
+  "external_api_calls": {"virustotal": 2, "abuseipdb": 2, "greynoise": 2},
+  "cache_hits": 4,
+  "dns_lookups": 0
+}
+```
+
+Les chiffres sont **dérivés des sorties d'outils**, jamais estimés : une source
+tombée en panne n'a rien consommé et n'est pas comptée ; un indicateur servi par
+le cache compte comme cache, pas comme appel. Un test le vérifie sur une réponse
+où GreyNoise est indisponible.
+
+### Deux couches de conservation
+
+| Couche | Rôle | Propriété |
+|---|---|---|
+| Anneau en mémoire (200 dossiers) | affichage de la console | éviction du plus ancien, **index purgé avec lui** |
+| `data/audit.jsonl` | audit et conformité | **ajout seul** |
+
+Le journal est en ajout seul à dessein : une trace qu'on peut réécrire ne prouve
+rien. Et une panne d'écriture du journal ne fait jamais perdre un verdict déjà
+rendu — l'erreur est tracée, l'investigation suit son cours. Un test force
+l'échec d'écriture et vérifie que le dossier reste consultable.

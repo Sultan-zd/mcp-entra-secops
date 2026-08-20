@@ -56,6 +56,37 @@ class TriageStep(BaseModel):
     error: str | None = Field(default=None, description="Message d'erreur, le cas échéant.")
 
 
+class RunCosts(BaseModel):
+    """Ressources consommées par une investigation.
+
+    Le coût n'est pas en tokens : aucun modèle de langage n'est dans la boucle
+    de décision. Ce qui s'épuise, c'est le quota des API externes — quatre
+    requêtes par minute sur le palier gratuit de VirusTotal.
+    """
+
+    external_api_calls: dict[str, int] = Field(
+        default_factory=dict, description="Appels réellement partis, par service tiers."
+    )
+    cache_hits: int = Field(default=0, description="Réponses servies depuis le cache.")
+    dns_lookups: int = Field(default=0, description="Résolutions DNS déclenchées.")
+
+    @property
+    def total_external(self) -> int:
+        """Appels réellement partis vers des services tiers."""
+        return sum(self.external_api_calls.values())
+
+    @property
+    def cache_ratio(self) -> float:
+        """Part des enrichissements évités grâce au cache.
+
+        C'est l'indicateur qui dit si la plateforme tiendra la charge :
+        sans cache, le quota gratuit est épuisé au milieu de la première
+        enquête.
+        """
+        total = self.total_external + self.cache_hits
+        return round(self.cache_hits / total, 3) if total else 0.0
+
+
 class ProposedAction(BaseModel):
     """Une action de remédiation proposée, jamais exécutée par l'agent."""
 
@@ -96,6 +127,9 @@ class TriageVerdict(BaseModel):
         )
     )
     steps: list[TriageStep] = Field(default_factory=list, description="Trace complète.")
+    costs: RunCosts = Field(
+        default_factory=RunCosts, description="Ressources consommées par l'investigation."
+    )
     duration_ms: int = Field(description="Durée totale de l'investigation.")
     tools_called: int = Field(description="Nombre d'appels d'outils effectués.")
 

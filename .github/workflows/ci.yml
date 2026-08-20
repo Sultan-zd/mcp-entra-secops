@@ -31,7 +31,10 @@ jobs:
           cache: pip
 
       - name: Installer le projet et ses dépendances de développement
-        run: pip install -e ".[dev]"
+        # L'extra `console` est indispensable ici : sans FastAPI, les tests de
+        # la console passent en `skip` silencieux et la chaîne resterait verte
+        # sur du code jamais exécuté.
+        run: pip install -e ".[dev,console]"
 
       - name: Lint (ruff)
         run: ruff check src tests
@@ -40,7 +43,9 @@ jobs:
         run: mypy src
 
       - name: Tests (pytest)
-        run: pytest
+        # `-rs` : un test ignoré doit apparaître dans le rapport. Une suite
+        # verte dont la moitié est en `skip` ne prouve rien.
+        run: pytest -q -rs
         env:
           # Aucun identifiant ni clé d'API n'est nécessaire : la suite est
           # hermétique et n'atteint jamais le réseau.

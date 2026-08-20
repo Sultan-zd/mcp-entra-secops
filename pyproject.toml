@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "argus-secops"
-version = "0.5.0"
+version = "0.6.0"
 description = "Plateforme SecOps agentique : serveurs MCP d'identité, de renseignement sur les menaces et de sécurité de la messagerie"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -30,6 +30,9 @@ dependencies = [
 # cache en memoire : suffisant pour un poste de travail, insuffisant des que
 # plusieurs instances tournent en parallele.
 cache = ["redis>=5.0"]
+# Console analyste. Optionnelle : les serveurs MCP et l'agent fonctionnent
+# sans elle, et la CI n'a pas besoin d'un serveur web pour valider le reste.
+console = ["fastapi>=0.115", "uvicorn>=0.32"]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
@@ -44,6 +47,7 @@ threat-intel-mcp = "threat_intel_mcp.__main__:main"
 email-security-mcp = "email_security_mcp.__main__:main"
 argus-agent = "argus_agent.__main__:main"
 argus-eval = "argus_eval.__main__:main"
+argus-console = "argus_console.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = [
@@ -52,6 +56,8 @@ packages = [
     "src/email_security_mcp",
     "src/argus_agent",
     "src/argus_eval",
+    "src/argus_obs",
+    "src/argus_console",
 ]
 
 # ---------------------------------------------------------------------------
@@ -76,7 +82,7 @@ disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["mcp.*", "azure.*", "redis.*", "dns.*"]
+module = ["mcp.*", "azure.*", "redis.*", "dns.*", "fastapi.*", "uvicorn.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------

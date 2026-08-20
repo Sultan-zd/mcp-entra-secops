@@ -21,7 +21,7 @@ import time
 from collections.abc import Awaitable, Callable
 from typing import Any
 
-from .models import Alert, TriageStep, TriageVerdict
+from .models import Alert, RunCosts, TriageStep, TriageVerdict
 from .playbooks import Step, select_playbook
 from .verdict import build_verdict
 
@@ -146,6 +146,33 @@ def _resume(tool: str, donnees: dict[str, Any]) -> str:
     return "Terminé"
 
 
+def _comptabilise(tool: str, donnees: dict[str, Any], couts: RunCosts) -> None:
+    """Relève ce que cette étape a réellement consommé.
+
+    Les chiffres sont dérivés des sorties d'outils, pas estimés : un verdict
+    d'indicateur servi depuis le cache porte `cached`, et chaque source y
+    déclare son statut. On compte donc ce qui est parti sur le réseau, et non
+    ce qu'on suppose être parti.
+    """
+    if tool in {"bulk_enrich", "enrich_ip", "enrich_domain", "enrich_file_hash"}:
+        verdicts = donnees.get("results") or [donnees]
+        for verdict in verdicts:
+            if not isinstance(verdict, dict):
+                continue
+            if verdict.get("cached"):
+                couts.cache_hits += 1
+                continue
+            for source in verdict.get("sources") or []:
+                if isinstance(source, dict) and source.get("status") in {"ok", "not_found"}:
+                    nom = str(source.get("source", "inconnue"))
+                    couts.external_api_calls[nom] = couts.external_api_calls.get(nom, 0) + 1
+
+    elif tool in {"check_domain_posture", "check_spf"}:
+        spf = donnees.get("spf") if tool == "check_domain_posture" else donnees
+        if isinstance(spf, dict):
+            couts.dns_lookups += int(spf.get("dns_lookups") or 0)
+
+
 def _collecte_indicateurs(tool: str, donnees: dict[str, Any], contexte: dict[str, Any]) -> None:
     """Alimente le contexte en indicateurs, pour les étapes d'enrichissement.
 
@@ -180,6 +207,7 @@ async def run_triage(
     playbook = select_playbook(alert)
     contexte: dict[str, Any] = {}
     etapes: list[TriageStep] = []
+    couts = RunCosts()
     depart = time.perf_counter()
 
     logger.info("Playbook « %s » sélectionné pour l'alerte %s.", playbook.name, alert.kind)
@@ -189,7 +217,7 @@ async def run_triage(
             logger.warning("Plafond de %d appels atteint : investigation écourtée.", MAX_TOOL_CALLS)
             break
 
-        etape = await _executer(step, numero, alert, contexte, registre)
+        etape = await _executer(step, numero, alert, contexte, registre, couts)
         etapes.append(etape)
         if on_step is not None:
             on_step(etape)
@@ -199,6 +227,7 @@ async def run_triage(
             break
 
     verdict = build_verdict(alert, playbook, contexte, etapes)
+    verdict.costs = couts
     verdict.duration_ms = int((time.perf_counter() - depart) * 1000)
     verdict.tools_called = sum(1 for e in etapes if e.status == "ok")
     return verdict
@@ -210,6 +239,7 @@ async def _executer(
     alert: Alert,
     contexte: dict[str, Any],
     registre: ToolRegistry,
+    couts: RunCosts,
 ) -> TriageStep:
     """Exécute une étape en absorbant toute défaillance de l'outil."""
     if not step.when(alert, contexte):
@@ -259,6 +289,7 @@ async def _executer(
     donnees = _to_dict(resultat)
     contexte[step.tool] = donnees
     _collecte_indicateurs(step.tool, donnees, contexte)
+    _comptabilise(step.tool, donnees, couts)
 
     return TriageStep(
         index=numero,

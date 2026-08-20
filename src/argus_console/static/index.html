@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ARGUS — console analyste</title>
+<style>
+  :root {
+    --ground: #0A0E14; --panel: #111821; --sunk: #0D131A;
+    --ink: #DCE3EB; --mid: #9BAAB7; --dim: #6D7D8A;
+    --rule: #1E2733; --rule2: #2C3846;
+    --signal: #FF6B35; --ok: #3DC9AE; --alert: #FF6169; --warn: #E0B24C;
+    --identity: #46C6DC; --intel: #B98CE8; --email: #E0B24C;
+    --mono: ui-monospace, "JetBrains Mono", "SFMono-Regular", Consolas, monospace;
+    --sans: -apple-system, "Segoe UI", Roboto, sans-serif;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --ground: #FAFBFC; --panel: #FFFFFF; --sunk: #F1F4F7;
+      --ink: #101720; --mid: #48565F; --dim: #74838E;
+      --rule: #DFE5EA; --rule2: #C3CDD5;
+      --signal: #C9410F; --ok: #12796B; --alert: #C0292E; --warn: #96650A;
+      --identity: #0E7C90; --intel: #7A3FA8; --email: #96650A;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--ground); color: var(--ink);
+         font-family: var(--sans); font-size: 15px; line-height: 1.55; }
+  header { border-bottom: 1px solid var(--rule); padding: .8rem 1.2rem;
+           display: flex; align-items: center; gap: 1.2rem; flex-wrap: wrap; }
+  .brand { font-weight: 700; letter-spacing: .06em; font-size: .95rem; }
+  .brand i { color: var(--signal); font-style: normal; }
+  .kpis { display: flex; gap: 1.3rem; margin-left: auto; flex-wrap: wrap; }
+  .kpi { font-family: var(--mono); font-size: .72rem; color: var(--dim); }
+  .kpi b { display: block; font-size: 1.05rem; color: var(--ink);
+           font-variant-numeric: tabular-nums; }
+
+  main { display: grid; gap: 1px; background: var(--rule); min-height: calc(100vh - 60px); }
+  @media (min-width: 1000px) { main { grid-template-columns: 320px 1fr; } }
+  .col { background: var(--ground); padding: 1.1rem 1.2rem; }
+
+  h2 { font-size: .72rem; font-family: var(--mono); letter-spacing: .12em;
+       text-transform: uppercase; color: var(--dim); margin: 0 0 .8rem; font-weight: 500; }
+
+  label { display: block; font-family: var(--mono); font-size: .7rem;
+          color: var(--dim); margin: .7rem 0 .25rem; letter-spacing: .04em; }
+  select, input {
+    width: 100%; padding: .5rem .6rem; border-radius: 3px; font-size: .88rem;
+    background: var(--panel); color: var(--ink); border: 1px solid var(--rule2);
+    font-family: var(--mono);
+  }
+  button {
+    font-family: var(--mono); font-size: .78rem; letter-spacing: .04em;
+    padding: .55rem .9rem; border-radius: 3px; cursor: pointer;
+    border: 1px solid var(--signal); background: var(--signal); color: var(--ground);
+  }
+  button:hover { opacity: .87; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  button.ghost { background: transparent; color: var(--ink); border-color: var(--rule2); }
+  button.ghost:hover { border-color: var(--signal); color: var(--signal); opacity: 1; }
+  button.rej { border-color: var(--rule2); }
+  :focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
+
+  #go { width: 100%; margin-top: 1rem; }
+
+  .runs { display: flex; flex-direction: column; gap: 1px; margin-top: 1.4rem;
+          background: var(--rule); border: 1px solid var(--rule); border-radius: 3px; }
+  .run { background: var(--panel); padding: .5rem .6rem; cursor: pointer;
+         display: grid; grid-template-columns: 4px 1fr auto; gap: .55rem; align-items: center; }
+  .run:hover { background: var(--sunk); }
+  .run .bar { height: 100%; min-height: 30px; border-radius: 2px; background: var(--vc); }
+  .run .who { font-family: var(--mono); font-size: .74rem;
+              overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .run .meta { font-family: var(--mono); font-size: .66rem; color: var(--dim); }
+  .run[data-v="malicious"]    { --vc: var(--alert); }
+  .run[data-v="suspicious"]   { --vc: var(--warn); }
+  .run[data-v="benign"]       { --vc: var(--ok); }
+  .run[data-v="inconclusive"] { --vc: var(--dim); }
+
+  .stream { display: flex; flex-direction: column; gap: .1rem; }
+  .step { display: grid; grid-template-columns: 2.2rem 1fr; gap: .5rem;
+          padding: .4rem .1rem; animation: rise .3s cubic-bezier(.2,.7,.3,1); }
+  @keyframes rise { from { opacity: 0; transform: translateY(4px); } }
+  .step .n { font-family: var(--mono); font-size: .68rem; color: var(--dim);
+             text-align: right; border-right: 2px solid var(--dc); padding-right: .4rem; }
+  .step .tool { font-family: var(--mono); font-size: .8rem; color: var(--dc); }
+  .step .ms { font-family: var(--mono); font-size: .66rem; color: var(--dim); margin-left: .4rem; }
+  .step .sum { font-size: .88rem; }
+  .step .note { font-size: .78rem; color: var(--dim); border-left: 1px solid var(--rule);
+                padding-left: .6rem; margin-top: .15rem; }
+  .step[data-d="identity"]     { --dc: var(--identity); }
+  .step[data-d="threat_intel"] { --dc: var(--intel); }
+  .step[data-d="email"]        { --dc: var(--email); }
+  .step[data-s="skipped"] { opacity: .45; }
+  .step[data-s="error"] .tool { color: var(--alert); }
+
+  .verdict { margin-top: 1rem; border: 1px solid var(--vc); border-radius: 3px;
+             background: var(--panel); padding: .9rem 1rem; }
+  .verdict[data-v="malicious"]    { --vc: var(--alert); }
+  .verdict[data-v="suspicious"]   { --vc: var(--warn); }
+  .verdict[data-v="benign"]       { --vc: var(--ok); }
+  .verdict[data-v="inconclusive"] { --vc: var(--dim); }
+  .vhead { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: baseline;
+           font-family: var(--mono); font-size: .74rem; color: var(--mid); }
+  .vhead strong { font-size: .95rem; letter-spacing: .06em; color: var(--vc); }
+  .vsum { margin: .7rem 0 0; font-size: .9rem; }
+  .tags { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .7rem; }
+  .tag { font-family: var(--mono); font-size: .68rem; padding: .2rem .45rem;
+         border: 1px solid var(--rule2); border-radius: 2px; color: var(--mid); }
+
+  .actions { margin-top: .9rem; display: flex; flex-direction: column; gap: .5rem; }
+  .action { border: 1px solid var(--rule); border-radius: 3px; padding: .6rem .7rem;
+            background: var(--sunk); }
+  .action .top { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center;
+                 justify-content: space-between; }
+  .action .lbl { font-size: .88rem; font-weight: 600; }
+  .action .pri { font-family: var(--mono); font-size: .64rem; letter-spacing: .06em;
+                 text-transform: uppercase; color: var(--signal); }
+  .action .why { font-size: .8rem; color: var(--dim); margin-top: .3rem; }
+  .action .btns { display: flex; gap: .4rem; margin-top: .55rem; }
+  .action .btns button { padding: .32rem .6rem; font-size: .7rem; }
+  .decided { font-family: var(--mono); font-size: .7rem; margin-top: .55rem; }
+  .decided.approved { color: var(--ok); }
+  .decided.rejected { color: var(--dim); }
+
+  .banner { font-family: var(--mono); font-size: .72rem; color: var(--dim);
+            border: 1px dashed var(--rule2); border-radius: 3px;
+            padding: .5rem .7rem; margin-top: .9rem; }
+  .empty { color: var(--dim); font-size: .88rem; }
+  .err { color: var(--alert); font-family: var(--mono); font-size: .8rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="brand">ARG<i>U</i>S — console analyste</span>
+  <div class="kpis" id="kpis"></div>
+</header>
+
+<main>
+  <div class="col">
+    <h2>Nouvelle investigation</h2>
+
+    <label for="kind">Famille d'alerte</label>
+    <select id="kind">
+      <option value="compte_compromis">compte_compromis</option>
+      <option value="utilisateur_a_risque">utilisateur_a_risque</option>
+      <option value="escalade_privileges">escalade_privileges</option>
+      <option value="phishing_signale">phishing_signale</option>
+      <option value="usurpation_domaine">usurpation_domaine</option>
+    </select>
+
+    <label for="upn">Compte (UPN)</label>
+    <input id="upn" value="marketing@teknologiia.com" spellcheck="false">
+
+    <label for="domain">Domaine</label>
+    <input id="domain" placeholder="teknologiia.com" spellcheck="false">
+
+    <button id="go" type="button">Lancer l'investigation</button>
+
+    <h2 style="margin-top:1.6rem">Dossiers récents</h2>
+    <div class="runs" id="runs"></div>
+  </div>
+
+  <div class="col">
+    <h2 id="streamTitle">Investigation</h2>
+    <div class="stream" id="stream"><p class="empty">Aucune investigation en cours.</p></div>
+    <div id="verdict"></div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let currentRun = null;
+
+async function loadSummary() {
+  const s = await (await fetch("/api/summary")).json();
+  $("kpis").innerHTML = [
+    ["dossiers", s.runs],
+    ["malveillants", s.malicious],
+    ["escalades", s.escalated],
+    ["actions en attente", s.pending_actions],
+    ["appels externes", s.external_calls],
+    ["cache", Math.round(s.cache_ratio * 100) + " %"]
+  ].map(([k, v]) => `<span class="kpi"><b>${v}</b>${k}</span>`).join("");
+}
+
+async function loadRuns() {
+  const runs = await (await fetch("/api/runs")).json();
+  const el = $("runs");
+  if (!runs.length) { el.innerHTML = '<div class="run"><span></span><span class="who empty">aucun</span><span></span></div>'; return; }
+  el.innerHTML = runs.map(r => `
+    <div class="run" data-v="${r.verdict}" data-id="${r.run_id}">
+      <span class="bar"></span>
+      <span class="who">${r.upn || r.kind}</span>
+      <span class="meta">${r.verdict}${r.pending_actions ? " · " + r.pending_actions + " ⏳" : ""}</span>
+    </div>`).join("");
+  el.querySelectorAll(".run").forEach(n =>
+    n.addEventListener("click", () => openRun(n.dataset.id)));
+}
+
+function stepNode(s) {
+  const el = document.createElement("div");
+  el.className = "step";
+  el.dataset.d = s.domain;
+  el.dataset.s = s.status;
+  const notes = (s.findings || []).slice(0, 2)
+    .map(f => `<div class="note"></div>`).join("");
+  el.innerHTML =
+    `<span class="n">${String(s.index).padStart(2, "0")}</span>
+     <div><span class="tool">${s.tool}</span><span class="ms">${s.duration_ms} ms</span>
+     <div class="sum"></div>${notes}</div>`;
+  el.querySelector(".sum").textContent = s.summary;
+  el.querySelectorAll(".note").forEach((n, i) => n.textContent = s.findings[i]);
+  return el;
+}
+
+function renderVerdict(runId, v) {
+  currentRun = runId;
+  const tags = [
+    ...v.indicators.map(i => `<span class="tag">${i}</span>`),
+    ...v.mitre_techniques.map(m => `<span class="tag">${m}</span>`)
+  ].join("");
+
+  const actions = v.recommended_actions.map(a => `
+    <div class="action" data-a="${a.action}">
+      <div class="top"><span class="lbl"></span><span class="pri">${a.priority}</span></div>
+      <div class="why"></div>
+      ${a.requires_approval
+        ? `<div class="btns">
+             <button type="button" data-d="approved">Approuver</button>
+             <button type="button" class="ghost rej" data-d="rejected">Rejeter</button>
+           </div>`
+        : `<div class="decided">sans effet de bord</div>`}
+    </div>`).join("");
+
+  $("verdict").innerHTML = `
+    <div class="verdict" data-v="${v.verdict}">
+      <div class="vhead">
+        <strong>VERDICT · ${v.verdict.toUpperCase()}</strong>
+        <span>gravité ${v.severity}</span>
+        <span>confiance ${v.confidence}</span>
+        <span>${v.tools_called} outils · ${v.duration_ms} ms</span>
+        <span>${v.costs.external_api_calls ? Object.values(v.costs.external_api_calls).reduce((a,b)=>a+b,0) : 0} appels externes</span>
+      </div>
+      <p class="vsum"></p>
+      <div class="tags">${tags}</div>
+      ${v.recommended_actions.length ? `<div class="actions">${actions}</div>` : ""}
+      ${v.escalate_to_human ? `<div class="banner">→ escalade vers un analyste</div>` : ""}
+      <div class="banner">Approuver consigne la décision dans le journal d'audit. Aucune action n'est exécutée sur le tenant.</div>
+    </div>`;
+
+  $("verdict").querySelector(".vsum").textContent = v.summary;
+  $("verdict").querySelectorAll(".action").forEach((node, i) => {
+    node.querySelector(".lbl").textContent = v.recommended_actions[i].label;
+    node.querySelector(".why").textContent = v.recommended_actions[i].rationale;
+  });
+  $("verdict").querySelectorAll(".action button").forEach(btn =>
+    btn.addEventListener("click", () => decide(btn)));
+}
+
+async function decide(btn) {
+  const node = btn.closest(".action");
+  node.querySelectorAll("button").forEach(b => b.disabled = true);
+  const res = await fetch(`/api/runs/${currentRun}/approvals`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      action: node.dataset.a, decision: btn.dataset.d, approver: "analyste@teknologiia.com"
+    })
+  });
+  const out = await res.json();
+  const line = document.createElement("div");
+  if (res.ok) {
+    line.className = "decided " + btn.dataset.d;
+    line.textContent = (btn.dataset.d === "approved" ? "approuvée" : "rejetée")
+      + " · consignée, non exécutée";
+  } else {
+    line.className = "err";
+    line.textContent = out.detail || "décision refusée";
+    node.querySelectorAll("button").forEach(b => b.disabled = false);
+  }
+  node.querySelector(".btns").replaceWith(line);
+  loadRuns(); loadSummary();
+}
+
+async function openRun(id) {
+  const d = await (await fetch(`/api/runs/${id}`)).json();
+  $("streamTitle").textContent = "Dossier " + d.run_id;
+  $("stream").replaceChildren(...d.verdict.steps.map(stepNode));
+  renderVerdict(d.run_id, d.verdict);
+}
+
+$("go").addEventListener("click", async () => {
+  const btn = $("go");
+  btn.disabled = true;
+  btn.textContent = "Investigation en cours…";
+  $("streamTitle").textContent = "Investigation en cours";
+  $("stream").replaceChildren();
+  $("verdict").innerHTML = "";
+
+  const body = { kind: $("kind").value, source: "console" };
+  if ($("upn").value.trim()) body.upn = $("upn").value.trim();
+  if ($("domain").value.trim()) body.domain = $("domain").value.trim();
+
+  const res = await fetch("/api/investigate", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  // Le flux arrive au fil de l'eau : on affiche chaque étape dès qu'elle
+  // se termine, plutôt qu'un sablier suivi d'un verdict.
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let tampon = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    tampon += decoder.decode(value, { stream: true });
+    const blocs = tampon.split("\n\n");
+    tampon = blocs.pop();
+    for (const bloc of blocs) {
+      const type = (bloc.match(/^event: (\w+)/m) || [])[1];
+      const data = (bloc.match(/^data: (.*)$/m) || [])[1];
+      if (!type || !data) continue;
+      const charge = JSON.parse(data);
+      if (type === "step") $("stream").appendChild(stepNode(charge));
+      else if (type === "verdict") renderVerdict(charge.run_id, charge.verdict);
+      else if (type === "error") $("verdict").innerHTML =
+        `<p class="err">${charge.error}</p>`;
+    }
+  }
+
+  btn.disabled = false;
+  btn.textContent = "Lancer l'investigation";
+  loadRuns(); loadSummary();
+});
+
+loadSummary(); loadRuns();
+</script>
+</body>
+</html>

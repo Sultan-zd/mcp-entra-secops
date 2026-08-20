@@ -36,3 +36,9 @@ desktop.ini
 # n'est pas le bon endroit pour la specification interne d'un employeur.
 *.pdf
 !docs/*.pdf
+
+# ---- Journal d'audit ------------------------------------------------------
+# Les dossiers d'investigation portent des UPN, des adresses IP et des
+# verdicts : de la telemetrie de tenant, qui n'a rien a faire dans un depot.
+data/
+rapport-evaluation.json
