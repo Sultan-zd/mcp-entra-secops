@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-parent</artifactId>
+        <version>4.1.1</version>
+        <relativePath/>
+    </parent>
+
+    <groupId>com.teknologiia</groupId>
+    <artifactId>argus-web</artifactId>
+    <version>1.0.0</version>
+    <name>ARGUS Web</name>
+    <description>Interface web de la plateforme SecOps ARGUS</description>
+
+    <properties>
+        <java.version>25</java.version>
+        <mcp.version>2.0.1</mcp.version>
+    </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <!-- Le BOM aligne les versions de tous les modules du SDK MCP entre
+                 elles : en déclarer une seule ici évite qu'un module traîne une
+                 version divergente par transitivité. -->
+            <dependency>
+                <groupId>io.modelcontextprotocol.sdk</groupId>
+                <artifactId>mcp-bom</artifactId>
+                <version>${mcp.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-validation</artifactId>
+        </dependency>
+
+        <!-- Client MCP. C'est la pièce centrale de cette application : le
+             backend Java ne réimplémente aucune analyse, il parle aux serveurs
+             MCP Python déjà écrits et déjà testés. -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp</artifactId>
+        </dependency>
+        <!-- Le SDK délègue la sérialisation JSON à un module explicite. Spring
+             Boot 4 embarquant Jackson 3, on prend l'implémentation assortie ;
+             prendre celle pour Jackson 2 ferait cohabiter deux Jackson. -->
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp-json-jackson3</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <!-- Spring Boot 4 a sorti la tranche web MVC de test-autoconfigure :
+             MockMvc et ses annotations vivent désormais dans ce module. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-webmvc-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

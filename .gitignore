@@ -42,3 +42,13 @@ desktop.ini
 # verdicts : de la telemetrie de tenant, qui n'a rien a faire dans un depot.
 data/
 rapport-evaluation.json
+
+# ---- ARGUS Web : Java + React ---------------------------------------------
+argus-web/backend/target/
+argus-web/frontend/node_modules/
+argus-web/frontend/dist/
+# Sortie de construction du front, recopiee dans le backend par `npm run build`.
+# La versionner produirait un diff a chaque build, sur des noms de fichiers
+# haches qui changent a chaque fois.
+argus-web/backend/src/main/resources/static/
+.mvn/wrapper/maven-wrapper.jar
