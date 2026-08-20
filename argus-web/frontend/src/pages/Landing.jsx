@@ -12,6 +12,7 @@ import {
   Siren,
 } from 'lucide-react'
 
+import Chat from '../components/Chat.jsx'
 import { analyserPosture, sante } from '../services/api.js'
 import './Landing.css'
 
@@ -101,11 +102,40 @@ export default function Landing() {
 
       <main>
         <section className="hero">
+          <div className="contenu hero-grille">
+            <div className="hero-texte">
+              <p className="surtitre">Branchez votre modèle · vos clés restent les vôtres</p>
+              <h1>
+                Posez la question. L'IA <em>mène l'enquête</em>.
+              </h1>
+              <p className="chapeau">
+                Connectez Claude — ou le modèle de votre choix — et interrogez votre
+                sécurité en français. Le modèle appelle lui-même les outils d'analyse
+                d'ARGUS et vous montre lesquels, un par un.
+              </p>
+              <ul className="hero-points">
+                <li>
+                  <strong>Rien à installer.</strong> Ni client de bureau, ni fichier de
+                  configuration à éditer.
+                </li>
+                <li>
+                  <strong>Le modèle rapporte, il ne juge pas.</strong> Les scores et les
+                  gravités viennent de code déterministe, pas de son appréciation.
+                </li>
+                <li>
+                  <strong>Tous les outils sont en lecture seule.</strong> Rien n'est
+                  modifié, nulle part.
+                </li>
+              </ul>
+            </div>
+            <Chat />
+          </div>
+        </section>
+
+        <section className="analyseur">
           <div className="contenu">
-            <p className="surtitre">Analyse gratuite · sans inscription</p>
-            <h1>
-              Votre domaine peut-il être <em>usurpé</em> ?
-            </h1>
+            <p className="surtitre">Sans clé d'API · sans inscription</p>
+            <h2>Ou testez un domaine tout de suite</h2>
             <p className="chapeau">
               Un attaquant qui envoie un courriel signé du nom de votre entreprise n'a
               besoin d'aucun accès à votre messagerie. Seule votre configuration DNS

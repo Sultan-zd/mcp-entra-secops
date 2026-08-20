@@ -48,6 +48,7 @@ argus:
           - check_spf
           - check_dmarc
           - check_dkim
+          - analyze_email_headers
 
 logging:
   level:

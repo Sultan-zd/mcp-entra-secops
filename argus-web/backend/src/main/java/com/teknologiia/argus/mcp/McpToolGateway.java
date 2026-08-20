@@ -1,5 +1,6 @@
 package com.teknologiia.argus.mcp;
 
+import io.modelcontextprotocol.spec.McpSchema;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
@@ -7,7 +8,9 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -65,6 +68,39 @@ public class McpToolGateway implements AutoCloseable {
             throw new McpToolException("Serveur d'analyse inconnu : " + serveur, false);
         }
         return pool.call(outil, arguments);
+    }
+
+    /**
+     * Appelle un outil sans savoir quel serveur le porte.
+     *
+     * <p>Le modele de langage ne connait que des noms d'outils : c'est a la
+     * plateforme de savoir ou chacun vit.
+     */
+    public Map<String, Object> callByName(String outil, Map<String, Object> arguments) {
+        for (McpServerPool pool : pools.values()) {
+            if (pool.getAllowedTools().contains(outil)) {
+                return pool.call(outil, arguments);
+            }
+        }
+        throw new McpToolException("Outil inconnu : " + outil, false);
+    }
+
+    /**
+     * Tous les outils exposes, tous serveurs confondus.
+     *
+     * <p>Un serveur en panne ne doit pas priver les autres de leur catalogue :
+     * l'echec est journalise et le reste est rendu.
+     */
+    public List<McpSchema.Tool> catalog() {
+        List<McpSchema.Tool> outils = new ArrayList<>();
+        pools.forEach((nom, pool) -> {
+            try {
+                outils.addAll(pool.listTools());
+            } catch (Exception e) {
+                log.error("Catalogue du serveur « {} » indisponible : {}", nom, e.toString());
+            }
+        });
+        return outils;
     }
 
     /** Indique si un serveur a au moins un processus vivant. */

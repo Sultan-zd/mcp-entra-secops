@@ -7,6 +7,43 @@ Interface web de la plateforme SecOps ARGUS.
 ![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
 ![MCP](https://img.shields.io/badge/MCP%20SDK-2.0.1-brightgreen)
 
+## Ce que c'est
+
+**Un hôte MCP dans le navigateur.** On branche son modèle — Claude aujourd'hui,
+d'autres ensuite — on pose une question en français, et le modèle appelle
+lui-même les outils d'analyse d'ARGUS. Ce que fait Claude Desktop, mais sur le
+site, sans installation ni fichier de configuration à éditer.
+
+```
+Navigateur ──SSE──> Spring Boot ──┬── API du modèle (clé de l'utilisateur)
+                                  └── MCP/stdio ──> serveurs Python (15 outils)
+```
+
+### Le modèle navigue, il ne juge pas
+
+C'est la règle qui concilie cette interface avec le principe fondateur d'ARGUS :
+**le code décide, jamais le prompt.** Les scores, les notes et les niveaux de
+gravité sont calculés par du Python testé. Le modèle choisit quels outils
+appeler et met en français ce qu'ils rendent — il ne recalcule rien.
+
+La distinction compte. Un enregistrement DNS et un en-tête de courriel sont
+écrits par l'attaquant. S'ils pouvaient infléchir un verdict, l'outil serait
+retournable contre son propriétaire. Ici ils n'atteignent que la rédaction,
+jamais la décision. Le prompt système demande explicitement de signaler toute
+tentative d'injection trouvée dans les données analysées.
+
+### Les clés restent celles de l'utilisateur
+
+La clé d'API arrive dans le corps de chaque requête et vit le temps de l'appel.
+Elle n'est **ni stockée, ni journalisée, ni mise en cache** côté serveur. Côté
+navigateur elle vit dans `sessionStorage`, donc elle disparaît à la fermeture de
+l'onglet — pas `localStorage`, qui survivrait sur une machine partagée.
+
+C'est ce qui permet d'offrir la conversation sans devenir dépositaire des
+secrets de ses visiteurs.
+
+---
+
 Deux étages, découpés selon ce que chaque outil exige réellement :
 
 | Étage | Outils | Condition d'accès |
@@ -93,6 +130,21 @@ Le backend sert alors l'interface et l'API sur **7998**, une seule origine —
 donc aucun CORS à configurer.
 
 ---
+
+## L'API de conversation
+
+| Route | Objet |
+|---|---|
+| `POST /api/chat` | Mène une conversation, diffuse chaque étape en SSE |
+| `GET /api/chat/providers` | Fournisseurs et modèles proposés |
+| `GET /api/chat/tools` | Les outils que le modèle pourra appeler |
+
+Les événements du flux : `text` (prose du modèle), `tool` (un outil est appelé),
+`tool_result` (ce qu'il a rendu), `done`, `error`.
+
+Un `POST /api/chat` rend **soit** un flux SSE, **soit** une erreur JSON. Le
+`produces` n'est donc pas figé sur la méthode — le figer faisait repartir les
+erreurs en `500` au lieu de `400`, défaut trouvé par un test.
 
 ## L'API publique
 

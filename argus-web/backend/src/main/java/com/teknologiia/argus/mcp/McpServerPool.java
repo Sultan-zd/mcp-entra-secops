@@ -239,6 +239,30 @@ class McpServerPool implements AutoCloseable {
         return sb.isEmpty() ? "L'analyse a échoué." : sb.toString();
     }
 
+    /**
+     * Les outils autorises de ce serveur, tels que le serveur les decrit.
+     *
+     * <p>Le schema d'entree vient du serveur MCP lui-meme : c'est lui qui fait
+     * autorite sur ce que chaque outil attend. Le recopier a la main ici
+     * produirait une seconde description qui divergerait en silence.
+     */
+    List<McpSchema.Tool> listTools() {
+        if (closed || all.isEmpty()) {
+            return List.of();
+        }
+        McpSyncClient client = borrow();
+        try {
+            return client.listTools().tools().stream()
+                    .filter(t -> allowedTools.contains(t.name()))
+                    .toList();
+        } catch (Exception e) {
+            throw new McpToolException(
+                    "Le serveur d'analyse « " + name + " » n'a pas pu lister ses outils.", e);
+        } finally {
+            idle.offer(client);
+        }
+    }
+
     boolean isReady() {
         return !closed && !all.isEmpty();
     }
