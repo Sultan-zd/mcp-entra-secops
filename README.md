@@ -22,6 +22,8 @@ Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
 quelques secondes une réponse fondée sur les données réelles du tenant.
 
+> 🎓 **[Comprendre ARGUS de A à Z](docs/COMPRENDRE.md)** — tout le projet
+> expliqué depuis zéro, sans prérequis. **Commencez par là.**
 > 📖 **[Guide d'installation et de test](docs/SETUP.md)** — les trois façons de
 > lancer le serveur, pas à pas.
 > 🔍 **[Brief technique](docs/RESEARCH.md)** — scan du marché et exposition sécurisée.
