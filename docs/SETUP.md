@@ -1,15 +1,30 @@
 # Guide d'installation et de test
 
-Ce document couvre les trois façons d'utiliser le serveur, de la plus simple à
-la plus complète :
+ARGUS est composé de **six serveurs MCP**. Trois d'entre eux ne demandent
+**aucune clé d'API** : vous pouvez les essayer dans la minute qui suit
+l'installation.
 
-1. **Test local en Python** — 2 minutes, aucune dépendance externe
-2. **Test dans Claude Desktop** — le vrai usage, avec des questions en langage naturel
-3. **Exécution en conteneur Docker** — le mode de livraison
+Ce document va du plus simple au plus complet :
+
+1. **Installation** — 2 minutes
+2. **Essayer les serveurs sans clé** — immédiat, rien à configurer
+3. **Lancer la suite de tests** — la preuve que tout fonctionne
+4. **Test dans Claude Desktop** — le vrai usage, en langage naturel
+5. **Exécution en conteneur Docker** — le mode de livraison
+6. **Connexion à un vrai tenant Entra ID** — pour les six outils d'identité
+
+| Serveur | Clé nécessaire ? | Réseau nécessaire ? |
+|---|---|---|
+| `mitre-attack-mcp` | Aucune | **Non** — corpus embarqué |
+| `vuln-intel-mcp` | Aucune | Oui — NVD, CISA, EPSS |
+| `web-recon-mcp` | Aucune | Oui — vers la cible analysée |
+| `email-security-mcp` | Aucune | Oui — DNS public |
+| `threat-intel-mcp` | VirusTotal, AbuseIPDB (gratuites) | Oui |
+| `entra-secops-mcp` | Votre tenant Microsoft | Oui |
 
 ---
 
-## 1. Test local en Python
+## 1. Installation
 
 ### Installation
 
@@ -37,22 +52,150 @@ cp .env.example .env            # Linux / macOS
 Le fichier contient déjà `ENTRA_DATA_SOURCE=fixture`. **Rien d'autre à
 remplir** : le serveur rejoue un incident de démonstration sans tenant Azure.
 
-### Lancer la suite de tests
+---
+
+## 2. Essayer les serveurs sans clé
+
+C'est le test le plus rapide. Chaque serveur a un mode `--check` qui vérifie ses
+sources et **affiche ce qu'il a réellement obtenu**.
+
+### MITRE ATT&CK — sans même de connexion Internet
+
+```bash
+mitre-attack-mcp --check
+```
+
+```
+Corpus embarqué
+  ✓ ATT&CK v19.2
+    697 techniques, 15 tactiques
+    44 atténuations, 176 groupes
+    161 techniques révoquées, tracées vers leur remplaçante
+
+Table de correspondance
+  ✓ 35 correspondances, toutes résolues dans le corpus
+    31 constats reconnus
+
+Aucun appel réseau n'a été effectué.
+```
+
+Coupez le Wi-Fi et relancez : le résultat est identique.
+
+### Vulnérabilités — trois sources publiques
+
+```bash
+vuln-intel-mcp --check
+```
+
+```
+Sources publiques
+  ✓ NVD        CVE-2021-44228 récupérée
+  ✓ CISA KEV   1673 entrées, version 2026.08.20
+  ✓ EPSS       CVE-2021-44228 : 0.99999
+
+Calcul local (aucun réseau)
+  ✓ CVSS v3.1  vecteur Log4Shell recalculé à 10.0
+```
+
+### Web et TLS — connexion directe
+
+```bash
+web-recon-mcp --check
+```
+
+```
+Chemins d'analyse
+  ✓ TLS direct   github.com : TLSv1.3, EC (secp256r1)
+                 expire dans 40 jour(s)
+  ✓ En-têtes     note C (60/100)
+  ✓ DNS          DNSSEC inconnu, 8 serveurs de noms
+  ✓ Transparence 10 sous-domaine(s) via certspotter
+                 6 nom(s) tiers exclus
+```
+
+### Messagerie
+
+```bash
+python -m email_security_mcp --check
+```
+
+> Si une source publique est en panne, le diagnostic le dit au lieu d'échouer en
+> silence. Un `✗` sur une ligne n'empêche pas les autres de s'afficher.
+
+### Si l'analyse de messagerie échoue en `LifetimeTimeout`
+
+```
+microsoft.com    ÉCHEC — Résolution DNS impossible : LifetimeTimeout
+```
+
+**Ce n'est pas un défaut du projet.** Beaucoup de résolveurs DNS de fournisseurs
+d'accès n'arrivent pas à rendre les réponses TXT volumineuses — `microsoft.com`
+en publie **61**, ce qui dépasse la taille d'un paquet UDP et exige un repli en
+TCP que tous les résolveurs ne gèrent pas correctement.
+
+Pointez vers un résolveur public :
+
+```bash
+# Windows (PowerShell)
+$env:MAIL_DNS_NAMESERVERS = "8.8.8.8,1.1.1.1"
+
+# Linux / macOS
+export MAIL_DNS_NAMESERVERS="8.8.8.8,1.1.1.1"
+```
+
+Le résultat attendu devient :
+
+```
+microsoft.com     note A (92/100)   SPF 7/10 lookups · DKIM 1 clé · DMARC reject
+teknologiia.com   note A (100/100)  SPF 1/10 lookups · DKIM 2 clés · DMARC reject
+```
+
+> Notez ce que le serveur **n'a pas fait** : face à un DNS muet, il n'a pas
+> conclu « ce domaine n'a pas de SPF ». Ce serait un faux négatif dangereux —
+> un domaine parfaitement protégé passerait pour vulnérable. Il dit qu'il n'a
+> pas pu savoir, ce qui est différent.
+
+---
+
+## 3. Lancer la suite de tests
 
 ```bash
 pytest
 ```
 
-Résultat attendu : `81 passed`.
+Résultat attendu : **609 tests**, tous verts, **sans aucun accès réseau ni clé
+d'API**. Les sources publiques sont simulées ; un test qui dépendrait de la
+disponibilité du NVD finirait par être ignoré.
+
+Pour ne tester qu'une partie :
+
+```bash
+pytest tests/test_cvss.py -v        # le calcul CVSS, contre 138 vecteurs réels
+pytest tests/test_mitre.py -v       # le corpus ATT&CK et les correspondances
+pytest tests/test_web_recon.py -v   # TLS, en-têtes, transparence
+pytest -k "prioriser" -v            # tous les tests de classement des CVE
+```
 
 ### Vérifier la qualité du code
 
 ```bash
 ruff check src tests    # style et erreurs courantes
-mypy src                # cohérence des types
+mypy src                # cohérence des types, en mode strict
 ```
 
-### Voir le serveur travailler
+### Le harnais d'évaluation
+
+C'est ce qui remplace « faites-moi confiance » par « voici le rapport » :
+
+```bash
+argus-eval
+```
+
+Il rejoue 25 incidents de référence et vérifie six métriques. Deux seulement
+font échouer la commande : le taux de faux négatifs et la résistance à
+l'injection — celles dont le coût de l'erreur est asymétrique.
+
+### Voir un serveur démarrer
 
 ```bash
 python -m entra_secops_mcp
@@ -61,11 +204,18 @@ python -m entra_secops_mcp
 Le serveur démarre et **attend** — c'est normal. Il parle le protocole MCP sur
 son entrée standard, pas avec un humain. Arrêtez-le avec `Ctrl+C`.
 
-Pour réellement voir une sortie, utilisez le script de démonstration ci-dessous.
+Pour voir une vraie sortie, utilisez le script de démonstration.
 
 ### Script de démonstration
 
-Créez `demo.py` à la racine du projet :
+Le fichier `demo.py` est déjà à la racine du projet :
+
+```bash
+python demo.py
+```
+
+Il rejoue une investigation complète sur des données de démonstration. Voici
+son contenu, pour comprendre comment appeler les outils depuis du Python :
 
 ```python
 import asyncio
@@ -117,7 +267,7 @@ IP observées : ['185.220.101.47', '77.42.130.18']
 
 ---
 
-## 2. Test dans Claude Desktop
+## 4. Test dans Claude Desktop
 
 C'est le test qui compte : celui où l'on pose une question en français et où
 l'IA va chercher la réponse elle-même.
@@ -132,23 +282,42 @@ l'IA va chercher la réponse elle-même.
 Sur Windows, collez `%APPDATA%\Claude` dans la barre d'adresse de l'explorateur.
 Si le fichier n'existe pas, créez-le.
 
-### Étape 2 — déclarer le serveur
+### Étape 2 — déclarer les serveurs
 
-Remplacez les deux chemins par les vôtres, **en absolu** :
+Remplacez le chemin par le vôtre, **en absolu**. Commencez par les trois
+serveurs sans clé — ils fonctionnent immédiatement :
 
 ```json
 {
   "mcpServers": {
-    "entra-secops": {
-      "command": "C:\\Users\\USER\\OneDrive\\Desktop\\Teknologiia\\mcp-entra-secops\\venv\\Scripts\\python.exe",
+    "argus-vulnerabilites": {
+      "command": "C:\\chemin\\vers\\mcp-entra-secops\\venv\\Scripts\\python.exe",
+      "args": ["-m", "vuln_intel_mcp"]
+    },
+    "argus-mitre": {
+      "command": "C:\\chemin\\vers\\mcp-entra-secops\\venv\\Scripts\\python.exe",
+      "args": ["-m", "mitre_mcp"]
+    },
+    "argus-web": {
+      "command": "C:\\chemin\\vers\\mcp-entra-secops\\venv\\Scripts\\python.exe",
+      "args": ["-m", "web_recon_mcp"]
+    },
+    "argus-messagerie": {
+      "command": "C:\\chemin\\vers\\mcp-entra-secops\\venv\\Scripts\\python.exe",
+      "args": ["-m", "email_security_mcp"]
+    },
+    "argus-identite": {
+      "command": "C:\\chemin\\vers\\mcp-entra-secops\\venv\\Scripts\\python.exe",
       "args": ["-m", "entra_secops_mcp"],
-      "env": {
-        "ENTRA_DATA_SOURCE": "fixture"
-      }
+      "env": { "ENTRA_DATA_SOURCE": "fixture" }
     }
   }
 }
 ```
+
+> **Vous n'êtes pas obligé de tout déclarer.** Chaque serveur est indépendant.
+> Gardez ceux qui vous servent — moins de serveurs, c'est aussi moins d'outils
+> envoyés au modèle à chaque question, donc moins de coût.
 
 > **Les doubles antislashs sont obligatoires** en JSON sous Windows.
 > `C:\Users` produit une erreur ; `C:\\Users` est correct.
@@ -161,7 +330,8 @@ notification, puis rouvrez-la. Un simple rechargement ne suffit pas.
 ### Étape 4 — vérifier la connexion
 
 Une icône d'outils apparaît dans la zone de saisie. En cliquant dessus, les
-6 outils doivent être listés.
+outils doivent être listés — **35** si vous avez déclaré les cinq serveurs
+ci-dessus.
 
 ### Étape 5 — poser les questions
 
@@ -184,6 +354,35 @@ Doit expliquer le code 53003 — blocage par accès conditionnel — et le refus
 
 Doit signaler la politique en mode audit seul et l'exclusion.
 
+#### Questions pour les serveurs sans clé
+
+> **« La CVE-2021-44228 est-elle activement exploitée ? »**
+
+Doit appeler `lookup_cve` et répondre oui — inscrite au catalogue CISA, EPSS à
+99,99 %, palier `immediate`.
+
+> **« J'ai ces CVE après un scan : CVE-2021-44228, CVE-2024-3094,
+> CVE-2022-40674, CVE-2016-2183. Par quoi je commence ? »**
+
+Doit appeler `prioritize_cves` et classer par paliers. Notez que SWEET32
+(CVSS 7.5) passe **devant** la porte dérobée xz (CVSS 10.0) : elle est bien plus
+exploitée.
+
+> **« Que veut dire le vecteur CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H ? »**
+
+Doit appeler `parse_cvss` et rendre 10.0, avec chaque métrique traduite. Aucun
+appel réseau.
+
+> **« Le domaine teknologiia.com est-il correctement exposé ? »**
+
+Doit appeler `check_web_exposure` : TLS, en-têtes, DNS et sous-domaines en une
+fois, avec une note sur 100.
+
+> **« Comment détecte-t-on la technique T1566.002 ? »**
+
+Doit appeler `lookup_technique` et donner les canaux de journalisation exacts
+à collecter.
+
 ### Si les outils n'apparaissent pas
 
 | Symptôme | Cause probable |
@@ -201,7 +400,7 @@ Journaux de Claude Desktop :
 
 ---
 
-## 3. Exécution en conteneur Docker
+## 5. Exécution en conteneur Docker
 
 ### Prérequis
 
@@ -247,7 +446,7 @@ Le conteneur démarre et attend, comme en local. `Ctrl+C` pour l'arrêter.
 
 ---
 
-## 4. Connexion à un vrai tenant Entra ID
+## 6. Connexion à un vrai tenant Entra ID
 
 ### Étape 1 — créer l'inscription d'application
 
@@ -348,7 +547,7 @@ python demo.py
 
 ---
 
-## 5. Règles de sécurité
+## 7. Règles de sécurité
 
 - **`.env` ne doit jamais être committé.** Il est exclu par `.gitignore`.
 - **Un secret poussé sur Git doit être révoqué** dans le portail Azure, pas

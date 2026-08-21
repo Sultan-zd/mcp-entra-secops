@@ -12,7 +12,7 @@ la fin.
 1. [En une phrase](#1--en-une-phrase)
 2. [Le problème qu'on résout](#2--le-problème-quon-résout)
 3. [C'est quoi, un « serveur MCP » ?](#3--cest-quoi-un--serveur-mcp)
-4. [Les trois serveurs et leurs 15 outils](#4--les-trois-serveurs-et-leurs-15-outils)
+4. [Les six serveurs et leurs 39 outils](#4--les-six-serveurs-et-leurs-39-outils)
 5. [Pourquoi ce n'est pas un simple relais d'API](#5--pourquoi-ce-nest-pas-un-simple-relais-dapi)
 6. [L'agent : celui qui enchaîne les outils](#6--lagent--celui-qui-enchaîne-les-outils)
 7. [Comment le verdict est calculé](#7--comment-le-verdict-est-calculé)
@@ -150,17 +150,34 @@ documentées ici pour que personne ne les refasse.
 
 ---
 
-## 4 · Les trois serveurs et leurs 15 outils
+## 4 · Les six serveurs et leurs 39 outils
 
-ARGUS n'est pas un serveur, mais **trois**, chacun spécialisé dans un domaine.
+ARGUS n'est pas un serveur, mais **six**, chacun spécialisé dans un domaine.
 Plus un agent qui les orchestre.
 
-### Pourquoi trois serveurs et pas un seul ?
+| Serveur | Domaine | Outils | Clé d'API ? |
+|---|---|---|---|
+| `entra-secops-mcp` | Identité Microsoft Entra | 6 | Oui, votre tenant |
+| `threat-intel-mcp` | Réputation d'indicateurs | 4 | Oui, gratuites |
+| `email-security-mcp` | SPF, DKIM, DMARC | 5 | **Aucune** |
+| `vuln-intel-mcp` | Vulnérabilités : CVE, KEV, EPSS | 9 | **Aucune** |
+| `mitre-attack-mcp` | Référentiel MITRE ATT&CK | 9 | **Aucune** — hors ligne |
+| `web-recon-mcp` | TLS, en-têtes, DNS, certificats | 6 | **Aucune** |
+
+**24 outils sur 39 ne demandent aucune clé.** Et douze fonctionnent même sans
+accès Internet.
+
+### Pourquoi six serveurs et pas un seul ?
 
 Le cloisonnement n'est pas cosmétique : **la clé VirusTotal et le secret Entra
 ne vivent pas dans le même processus**. Si l'un des deux est compromis, l'autre
 ne l'est pas. C'est un principe de sécurité classique — le moindre privilège —
 appliqué à l'architecture.
+
+Il y a une seconde raison, plus pratique : vous n'installez que ce dont vous
+avez besoin. Un analyste qui veut seulement les outils de vulnérabilités lance
+`vuln-intel-mcp` et rien d'autre. Il n'a ni tenant Microsoft, ni clé, ni
+configuration à remplir.
 
 ### Serveur 1 — `entra-secops-mcp` · l'identité
 
@@ -215,6 +232,70 @@ Il vérifie si un courriel est authentique, et si un domaine peut être usurpé.
   sceau de cire : si on ouvre la lettre, ça se voit.
 - **DMARC** — la consigne donnée aux autres serveurs de courrier : « si un
   message se prétend de chez moi mais échoue SPF et DKIM, **rejette-le** ».
+
+### Serveur 4 — `vuln-intel-mcp` · les vulnérabilités
+
+Aucune clé d'API. Il croise **trois sources publiques qui ne disent pas la même
+chose** :
+
+| Source | Ce qu'elle répond |
+|---|---|
+| **NVD** (NIST) | Ce qu'est la faille, et sa gravité *théorique* |
+| **CISA KEV** | Si elle est *réellement* exploitée, avec une échéance imposée |
+| **EPSS** (FIRST) | La probabilité qu'elle le soit dans les trente jours |
+
+| Outil | Ce qu'il répond |
+|---|---|
+| `lookup_cve` | Cette faille est-elle grave, et dois-je m'en occuper maintenant ? |
+| `prioritize_cves` | **Mon scan rend 40 CVE, par quoi je commence ?** |
+| `check_kev` | Est-elle activement exploitée ? |
+| `search_cve` | Quelles failles touchent ce produit ? |
+| `cve_for_product` | Idem, mais sur une version précise |
+| `bulk_lookup_cve` | Plusieurs fiches d'un coup |
+| `get_epss` | Probabilité d'exploitation |
+| `parse_cvss` | Que veut dire ce vecteur ? *(100 % local, hors ligne)* |
+| `kev_catalog_stats` | Qu'est-ce qui vient d'être exploité ? |
+
+**Pourquoi le croisement compte.** Une faille notée 9.8 que personne n'exploite
+est moins pressante qu'une 6.5 inscrite au catalogue CISA. La première est un
+risque théorique, la seconde est une attaque en cours quelque part.
+
+### Serveur 5 — `mitre-attack-mcp` · le référentiel des techniques d'attaque
+
+**Entièrement hors ligne.** MITRE ATT&CK est le catalogue mondial des
+techniques d'attaque : quand un rapport d'incident dit « T1566.002 », tout le
+monde comprend « hameçonnage par lien ».
+
+Le corpus officiel pèse 51 Mo. Il est réduit à 1,8 Mo et **embarqué dans le
+projet**, donc ces neuf outils répondent en quelques millisecondes, sans
+Internet.
+
+| Outil | Ce qu'il répond |
+|---|---|
+| `lookup_technique` | Que fait cette technique, et **comment la détecter** ? |
+| `map_findings_to_attack` | **Comment nommer ce que j'observe ?** |
+| `search_techniques` | Quelle technique correspond à ceci ? |
+| `coverage_report` | Que ne détecte-t-on pas encore ? |
+| `list_tactics` | Où en est l'attaquant dans sa progression ? |
+| `lookup_group` | Qui est ce groupe d'attaquants ? |
+| `build_navigator_layer` | Visualiser tout ça dans l'ATT&CK Navigator |
+| `list_known_findings` | Quel vocabulaire l'outil sait-il traduire ? |
+| `corpus_info` | Quelle version du référentiel est embarquée ? |
+
+### Serveur 6 — `web-recon-mcp` · l'exposition web et TLS
+
+Aucune clé. **Trois de ces outils n'interrogent aucune API** : ils ouvrent
+eux-mêmes la connexion. Ils fonctionnent donc sur un serveur **interne**, qu'un
+service en ligne ne pourrait jamais atteindre.
+
+| Outil | Ce qu'il répond |
+|---|---|
+| `check_web_exposure` | **Ce domaine est-il correctement exposé ?** (les quatre à la fois) |
+| `check_tls` | Sa configuration TLS tient-elle ? |
+| `check_certificate_expiry` | Mes certificats vont-ils expirer ? |
+| `check_security_headers` | Ce site est-il durci ? |
+| `check_dns_hygiene` | Mon DNS a-t-il des failles ? |
+| `find_subdomains` | Qu'ai-je exposé sans le savoir ? |
 
 ---
 
@@ -353,7 +434,40 @@ Un attaquant peut donc parfaitement passer SPF avec son propre domaine tout en
 affichant `From: pdg@votreentreprise.com`. C'est l'**alignement** qui attrape
 ça, et ARGUS le vérifie.
 
-### 5.8 · Le cache et la limitation de débit
+### 5.8 · La note CVSS est recalculée, pas recopiée
+
+Un bulletin de sécurité annonce un vecteur (`CVSS:3.1/AV:N/AC:L/...`) et une
+note. ARGUS **recalcule la note à partir du vecteur**, par la formule de la
+norme, sans rien demander à personne.
+
+Trois usages. Comprendre — le vecteur est traduit en français. Vérifier — si la
+note annoncée ne correspond pas au vecteur, l'un des deux est faux, et c'est
+signalé. Raisonner — modifiez une métrique et rappelez l'outil pour voir l'effet.
+
+L'implémentation est confrontée à **138 vecteurs réels du NVD** avec leur note
+officielle, hors ligne, à chaque exécution des tests. Zéro écart.
+
+### 5.9 · Le référentiel ATT&CK est embarqué, pas interrogé
+
+Le corpus officiel pèse 51 Mo et change quatre fois par an. Le télécharger à
+chaque démarrage coûterait plusieurs secondes, échouerait hors ligne, et
+placerait une dépendance réseau au cœur d'outils qui n'en ont aucun besoin.
+
+Il est donc **distillé à 1,8 Mo et versionné avec le code**. Conséquence : ces
+neuf outils fonctionnent sur un poste sans Internet, et leurs réponses ne
+varient pas d'un appel à l'autre.
+
+### 5.10 · L'inspection TLS ouvre sa propre connexion
+
+Pour savoir si un serveur accepte encore TLS 1.0, ARGUS **essaie** — il ouvre
+une connexion en forçant cette version, et regarde ce qui se passe. Il ne
+demande pas à un service tiers ce qu'il a observé.
+
+Deux conséquences. Cela fonctionne sur un **serveur interne**, qu'aucun service
+en ligne ne pourrait atteindre. Et la note ne change pas parce qu'un prestataire
+a modifié son barème.
+
+### 5.11 · Le cache et la limitation de débit
 
 Le palier gratuit de VirusTotal autorise environ **4 requêtes par minute**. Sans
 protection, une seule investigation épuiserait le quota.
@@ -367,7 +481,7 @@ protection, une seule investigation épuiserait le quota.
 
 ## 6 · L'agent : celui qui enchaîne les outils
 
-Les 15 outils sont utilisables un par un. L'agent les **enchaîne
+Les 39 outils sont utilisables un par un. L'agent les **enchaîne
 automatiquement** selon le type d'alerte.
 
 ### Les 5 playbooks
@@ -774,11 +888,29 @@ arriver une par une.
 ### Lancer les tests
 
 ```bash
-pytest              # 288 tests, aucun accès réseau
+pytest              # 609 tests, aucun accès réseau
 ruff check src tests
 mypy src            # vérification de types en mode strict
 argus-eval          # le harnais d'évaluation
 ```
+
+### Essayer les serveurs sans clé, tout de suite
+
+Trois serveurs ne demandent **rien** : ni compte, ni clé, ni configuration.
+
+```bash
+# Vulnérabilités — interroge NVD, CISA et EPSS
+vuln-intel-mcp --check
+
+# MITRE ATT&CK — n'accède même pas au réseau
+mitre-attack-mcp --check
+
+# Web et TLS — ouvre ses propres connexions
+web-recon-mcp --check
+```
+
+Chacun affiche ce qu'il a réellement obtenu. Si une source publique est en
+panne, il le dit plutôt que d'échouer en silence.
 
 ### Vérifier une connexion réelle
 
@@ -858,6 +990,12 @@ réalité.
 | Sortie d'outil enveloppée, ses champs invisibles au verdict | L'agent concluait au calme plat sur un incident réel |
 | Attaque en cours mais non aboutie classée « bénigne » | Un test sur un compte privilégié sans connexion réussie |
 | Faux positif sur un mot de passe oublié | Un cas adversarial du jeu d'évaluation |
+| Le NVD publie **plusieurs notes CVSS** pour une même CVE : Microsoft annonce 5.5 pour Zerologon, le NIST 10.0. Le code prenait la première venue — `critical` devenait `medium` | Un chiffre qui a paru suspect dans une sortie |
+| Deux correspondances ATT&CK visaient `T1562.001`, **révoquée en v19** — elles seraient parties dans des rapports d'incident | Le test qui confronte chaque identifiant au corpus |
+| ATT&CK v19 a **déplacé la détection** hors de l'objet technique : silence complet sur 697 techniques, sur le champ annoncé comme le plus utile | Un champ vide dans une sortie de test |
+| `getpeercert()` rend un dictionnaire **vide** sans vérification — le mode requis pour inspecter un certificat expiré | Tous les champs du certificat à `None` |
+| Un certificat **expiré** ressortait en gravité « moyenne » | Un test qui attendait « critique » |
+| Les journaux de transparence rendent 269 noms pour un domaine, dont **253 appartiennent à d'autres entreprises** | Lecture de la réponse réelle |
 | `get_settings` importé d'un module qui ne l'exporte pas | `mypy --strict` |
 | Journal d'audit non exclu de git (fuite d'UPN et d'IP) | `git check-ignore` avant le commit |
 | Tests de console ignorés en silence dans la CI | Relecture du workflow avant le push |
@@ -921,11 +1059,35 @@ mcp-entra-secops/
 │   │   ├── models.py               coûts, dossiers, approbations
 │   │   └── store.py                anneau mémoire + journal ajout seul
 │   │
+│   ├── vuln_intel_mcp/          ← Serveur 4 : vulnérabilités (9 outils)
+│   │   ├── cvss.py                 ★ calcul CVSS, 100 % local
+│   │   ├── prioritize.py           ★ classement par paliers déterministes
+│   │   ├── sources.py              NVD, CISA KEV, EPSS
+│   │   └── fixtures/cvss_nvd.json  138 vecteurs réels, pour les tests
+│   │
+│   ├── mitre_mcp/               ← Serveur 5 : ATT&CK (9 outils, hors ligne)
+│   │   ├── corpus.py               chargement et recherche locale
+│   │   ├── mapping.py              ★ constats ARGUS → techniques ATT&CK
+│   │   └── fixtures/attack.json    le corpus distillé, 1,8 Mo
+│   │
+│   ├── web_recon_mcp/           ← Serveur 6 : web et TLS (6 outils)
+│   │   ├── tls.py                  ★ connexion directe, aucune API
+│   │   ├── headers.py              en-têtes de sécurité, notés localement
+│   │   ├── dnshygiene.py           ★ DNSSEC, CAA, alias pendants
+│   │   └── ct.py                   transparence des certificats
+│   │
+│   ├── argus_net/               ← Socle réseau partagé
+│   │   ├── http.py                 client avec réessai
+│   │   ├── feeds.py                cache des gros catalogues
+│   │   └── ratelimit.py            seau à jetons
+│   │
 │   └── argus_console/           ← La console analyste
 │       ├── app.py                  API FastAPI + flux SSE
 │       └── static/index.html       l'interface
 │
-├── tests/                       ← 288 tests
+├── scripts/
+│   └── distiller_attack.py      ← régénère le corpus ATT&CK embarqué
+├── tests/                       ← 609 tests
 ├── docs/
 │   ├── SETUP.md                    installation pas à pas
 │   ├── RESEARCH.md                 scan du marché, exposition sécurisée
@@ -936,8 +1098,9 @@ mcp-entra-secops/
 ```
 
 Les fichiers marqués ★ sont ceux où se concentre la valeur réelle du projet. Si
-vous ne devez en lire que quatre : `fusion.py`, `verdict.py`, `spf.py`,
-`headers.py`.
+vous ne devez en lire que cinq : `verdict.py` (la décision), `cvss.py` (le
+calcul), `prioritize.py` (l'ordre de correction), `fusion.py` (le croisement de
+sources) et `spf.py` (la limite des dix résolutions).
 
 ---
 
