@@ -14,9 +14,15 @@ client MCP).
 | `entra-secops-mcp` | Identité — journaux Microsoft Entra ID | 6 |
 | `threat-intel-mcp` | Renseignement — VirusTotal, AbuseIPDB, GreyNoise | 4 |
 | `email-security-mcp` | Messagerie — SPF, DKIM, DMARC, en-têtes | 5 |
-| `argus-agent` | **Orchestration** — enchaîne les trois domaines | — |
+| `vuln-intel-mcp` | **Vulnérabilités** — NVD, CISA KEV, EPSS · *sans clé* | 9 |
+| `mitre-attack-mcp` | **MITRE ATT&CK** — corpus embarqué · *hors ligne* | 9 |
+| `argus-agent` | **Orchestration** — enchaîne les domaines | — |
 | `argus-eval` | **Évaluation** — 25 incidents de référence, seuils bloquants | — |
 | `argus-console` | **Console analyste** — investigation en direct, porte d'approbation | — |
+
+**33 outils.** Dix-huit d'entre eux ne demandent **aucune clé d'API** : NVD, le
+catalogue CISA et EPSS sont publics, et le corpus ATT&CK est embarqué. Les neuf
+outils MITRE fonctionnent **sans le moindre accès réseau**.
 
 Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
@@ -144,7 +150,7 @@ les trames JSON.
 ## Développement
 
 ```bash
-pytest              # 288 tests
+pytest              # 571 tests
 ruff check src tests
 mypy src            # mode strict
 pre-commit install  # contrôles avant chaque commit
@@ -155,8 +161,8 @@ python demo.py      # investigation de démonstration
 
 | | |
 |---|---|
-| Outils | 15 au total (6 identité + 4 renseignement + 5 messagerie), tous en lecture seule |
-| Tests | 288, sans clé ni tenant requis |
+| Outils | 33 au total, tous en lecture seule ; 18 sans aucune clé d'API |
+| Tests | 571, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
 | Conteneur | vérifié via un vrai client MCP : démarrage 2,4 s, appel d'outil ~110 ms |
@@ -470,3 +476,157 @@ Le journal est en ajout seul à dessein : une trace qu'on peut réécrire ne pro
 rien. Et une panne d'écriture du journal ne fait jamais perdre un verdict déjà
 rendu — l'erreur est tracée, l'investigation suit son cours. Un test force
 l'échec d'écriture et vérifie que le dossier reste consultable.
+
+---
+
+## Le serveur de renseignement sur les vulnérabilités
+
+```bash
+vuln-intel-mcp --check        # vérifie les trois sources publiques
+```
+
+Neuf outils, **aucune clé d'API**. Trois sources qui ne disent pas la même
+chose, et dont le croisement fait toute la valeur :
+
+| Source | Ce qu'elle répond |
+|---|---|
+| **NVD** | Ce qu'est la faille, et sa gravité *théorique* |
+| **CISA KEV** | Si elle est *réellement* exploitée, avec une échéance imposée |
+| **EPSS** | La probabilité qu'elle le soit dans les trente jours |
+
+### La note CVSS est recalculée, pas relayée
+
+`parse_cvss` implémente la formule de la norme et **ne fait aucun appel
+réseau**. Ça sert à trois choses : lire un vecteur en français, vérifier qu'une
+note annoncée correspond à son vecteur, et simuler une variante sans redemander
+quoi que ce soit.
+
+L'implémentation est confrontée à **138 vecteurs réels du NVD** avec leur note
+officielle, hors ligne, à chaque exécution de la suite. Zéro écart.
+
+> Deux pièges que le test a permis de voir. La norme impose un **arrondi
+> supérieur** que `round()` ne reproduit pas — l'écart vaut une classe de
+> sévérité. Et les privilèges requis pèsent **différemment selon que le
+> périmètre change** : un barème unique sous-évaluerait précisément les failles
+> les plus graves.
+
+### `prioritize_cves` — l'outil qui répond à la vraie question
+
+« Mon scan rend quarante CVE, par quoi je commence ? » Une note CVSS seule ne
+répond pas.
+
+```
+ 1. CVE-2021-44228   immediate   KEV   CVSS 10.0   EPSS 100.0%
+ 2. CVE-2021-3156    immediate   KEV   CVSS  7.8   EPSS  99.3%
+ …
+ 5. CVE-2016-2183    urgent            CVSS  7.5   EPSS  95.7%
+ 6. CVE-2024-3094    urgent            CVSS 10.0   EPSS  86.0%
+ 8. CVE-2022-40674   planifie          CVSS  8.1   EPSS   1.8%
+```
+
+Relevé réel. Notez le rang 5 devant le rang 6 : **SWEET32, notée 7.5, passe
+devant la porte dérobée xz notée 10.0**, parce qu'elle est bien plus exploitée.
+Un tri par CVSS aurait fait l'inverse.
+
+Le classement est **déterministe et par paliers**, pas par score mélangé — un
+palier se défend devant un responsable (« la CISA impose le 3 septembre »), un
+nombre composite de 73,4 ne se défend pas. Chaque rang porte sa justification.
+
+### Un défaut que seule la vérification pouvait révéler
+
+Le NVD publie **plusieurs notes CVSS pour une même CVE**. Pour Zerologon
+(`CVE-2020-1472`), Microsoft annonce **5.5** et le NIST **10.0**. Mon code
+prenait la première venue : la faille passait de `critical` à `medium`.
+
+Corrigé — la notation primaire prime, et un écart de deux points ou plus entre
+sources est désormais **signalé à l'analyste** plutôt que masqué par le choix
+silencieux de l'une d'elles.
+
+### Ce que le serveur refuse de faire
+
+- **Inventer une note v4.0.** La notation CVSS v4.0 repose sur une table de
+  plusieurs centaines d'entrées, pas sur une formule. Plutôt qu'une
+  approximation qui donnerait des chiffres faux avec l'assurance d'un calcul,
+  le vecteur est décodé et `computed_locally` vaut `false`.
+- **Confondre « inconnu » et « sans danger ».** Une CVE sans note ni
+  probabilité tombe dans le palier `indetermine`, qui remonte **avant**
+  `planifie` — un cas non qualifié doit être vu, pas enterré.
+- **Servir des données périmées en silence.** Si le catalogue CISA n'a pas pu
+  être rafraîchi, la version précédente est servie — et `catalog_stale` le dit.
+
+---
+
+## Le serveur MITRE ATT&CK
+
+```bash
+mitre-attack-mcp --check      # vérifie le corpus embarqué
+```
+
+Neuf outils, **zéro appel réseau**. Le corpus officiel pèse 51 Mo et change
+quatre fois par an ; il est distillé à 1,8 Mo et versionné avec le code
+(`scripts/distiller_attack.py`).
+
+C'est un compromis assumé, et il paie : le serveur répond en quelques
+millisecondes, fonctionne sur un poste sans Internet, et ses réponses ne varient
+pas d'un appel à l'autre.
+
+### `map_findings_to_attack` — le point de jonction
+
+C'est l'outil qui relie ce qu'ARGUS observe au vocabulaire des rapports
+d'incident. On lui passe les constats bruts des autres serveurs :
+
+```
+leakedCredentials                    → T1589.001  Credentials          [high]
+                                     → T1078.004  Cloud Accounts       [high]
+anonymizedIPAddress                  → T1090.003  Multi-hop Proxy      [high]
+succes_apres_echecs                  → T1110      Brute Force          [high]
+protocole_herite                     → T1556      Modify Auth Process  [medium]
+user registered security info        → T1556.006  Multi-Factor Auth    [high]
+add member to role                   → T1098.003  Additional Cloud Roles
+certificates and secrets management  → T1098.001  Additional Cloud Credentials
+```
+
+> « L'attaquant a atteint des étapes tardives de la chaîne (persistence,
+> privilege-escalation) : une simple réinitialisation de mot de passe ne
+> suffira pas. »
+
+La table est **écrite à la main**, pas déduite par similarité. Un identifiant
+ATT&CK finit dans un rapport relu par quelqu'un qui connaît le référentiel : il
+ne peut pas être approximatif. Chaque ligne porte sa justification, et un
+constat sans correspondance établie est rendu « non traduit » plutôt que
+rapproché de la technique la plus proche.
+
+**Deux tests figent cette table** : l'un vérifie que chacune des 35
+correspondances vise une technique réellement présente dans le corpus, l'autre
+que le vocabulaire couvre tout ce que les serveurs Entra produisent.
+
+### Deux défauts que seule la vérification pouvait révéler
+
+**Deux correspondances visaient `T1562.001`** — une technique qui a bel et bien
+existé, mais qu'ATT&CK a **révoquée en v19**. Écrites de mémoire, elles seraient
+parties dans des rapports d'incident. Le test qui confronte chaque identifiant
+au corpus les a arrêtées ; la bonne technique était `T1556.009`, « Conditional
+Access Policies », plus précise de surcroît.
+
+**ATT&CK v19 a sorti la détection de l'objet technique.** Le distillateur lisait
+l'ancien champ `x_mitre_detection` : il produisait un silence complet sur les
+697 techniques, alors que ce champ était annoncé comme le plus utile. La donnée
+vit désormais dans des objets `x-mitre-detection-strategy`, et elle est plus
+riche — elle nomme les canaux de journalisation exacts :
+
+```
+T1566.002  Spearphishing Link
+  m365:unified (Send/Receive: Inbound emails containing embedded URLs)
+  WinEventLog:Security (EventCode=4688)
+  WinEventLog:Sysmon (EventCode=3, 22)
+```
+
+Un test vérifie désormais que **les 697 techniques portent leur détection**.
+
+### Ce que le serveur refuse de faire
+
+- **Nier une technique révoquée.** `lookup_technique("T1562.001")` ne répond pas
+  « inconnue » — ce qui ferait croire à une faute de frappe — mais explique
+  qu'elle a été retirée et renvoie vers `T1685`.
+- **Rapprocher approximativement.** Un constat hors vocabulaire est listé dans
+  `unmapped`. Une correspondance fausse est pire qu'une correspondance absente.
