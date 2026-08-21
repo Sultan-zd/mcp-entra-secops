@@ -10,6 +10,7 @@ import pytest
 from entra_secops_mcp.config import Settings, get_settings
 from threat_intel_mcp.config import Settings as TiSettings
 from threat_intel_mcp.config import get_settings as ti_get_settings
+from vuln_intel_mcp.config import get_settings as vuln_get_settings
 
 
 @pytest.fixture(autouse=True)
@@ -20,14 +21,18 @@ def environnement_hermetique(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     verrait passer un test censé constater l'absence d'identifiants.
     """
     for name in list(os.environ):
-        if name.startswith(("AZURE_", "ENTRA_", "TI_", "VIRUSTOTAL_", "ABUSEIPDB_", "GREYNOISE_")):
+        if name.startswith(
+            ("AZURE_", "ENTRA_", "TI_", "VIRUSTOTAL_", "ABUSEIPDB_", "GREYNOISE_", "VULN_", "NVD_")
+        ):
             monkeypatch.delenv(name, raising=False)
 
     get_settings.cache_clear()
     ti_get_settings.cache_clear()
+    vuln_get_settings.cache_clear()
     yield
     get_settings.cache_clear()
     ti_get_settings.cache_clear()
+    vuln_get_settings.cache_clear()
 
 
 @pytest.fixture

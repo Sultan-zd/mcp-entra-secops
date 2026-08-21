@@ -45,6 +45,7 @@ dev = [
 entra-secops-mcp = "entra_secops_mcp.__main__:main"
 threat-intel-mcp = "threat_intel_mcp.__main__:main"
 email-security-mcp = "email_security_mcp.__main__:main"
+vuln-intel-mcp = "vuln_intel_mcp.__main__:main"
 argus-agent = "argus_agent.__main__:main"
 argus-eval = "argus_eval.__main__:main"
 argus-console = "argus_console.__main__:main"
@@ -58,6 +59,8 @@ packages = [
     "src/argus_eval",
     "src/argus_obs",
     "src/argus_console",
+    "src/argus_net",
+    "src/vuln_intel_mcp",
 ]
 
 # ---------------------------------------------------------------------------
