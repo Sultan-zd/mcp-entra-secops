@@ -23,6 +23,10 @@ dependencies = [
     "pydantic-settings>=2.6",
     # Resolution DNS asynchrone : SPF, DKIM et DMARC sont publies dans le DNS.
     "dnspython>=2.7",
+    # Lecture des certificats X.509 : le module `ssl` ne rend aucun champ
+    # quand la verification est desactivee, ce qui est precisement le mode
+    # ou l'on veut inspecter un certificat expire ou auto-signe.
+    "cryptography>=42.0",
 ]
 
 [project.optional-dependencies]
@@ -47,6 +51,7 @@ threat-intel-mcp = "threat_intel_mcp.__main__:main"
 email-security-mcp = "email_security_mcp.__main__:main"
 vuln-intel-mcp = "vuln_intel_mcp.__main__:main"
 mitre-attack-mcp = "mitre_mcp.__main__:main"
+web-recon-mcp = "web_recon_mcp.__main__:main"
 argus-agent = "argus_agent.__main__:main"
 argus-eval = "argus_eval.__main__:main"
 argus-console = "argus_console.__main__:main"
@@ -63,6 +68,7 @@ packages = [
     "src/argus_net",
     "src/vuln_intel_mcp",
     "src/mitre_mcp",
+    "src/web_recon_mcp",
 ]
 
 # ---------------------------------------------------------------------------

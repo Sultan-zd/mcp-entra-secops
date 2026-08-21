@@ -16,13 +16,19 @@ client MCP).
 | `email-security-mcp` | Messagerie — SPF, DKIM, DMARC, en-têtes | 5 |
 | `vuln-intel-mcp` | **Vulnérabilités** — NVD, CISA KEV, EPSS · *sans clé* | 9 |
 | `mitre-attack-mcp` | **MITRE ATT&CK** — corpus embarqué · *hors ligne* | 9 |
+| `web-recon-mcp` | **Web & TLS** — connexion directe, DNS, transparence · *sans clé* | 6 |
 | `argus-agent` | **Orchestration** — enchaîne les domaines | — |
 | `argus-eval` | **Évaluation** — 25 incidents de référence, seuils bloquants | — |
 | `argus-console` | **Console analyste** — investigation en direct, porte d'approbation | — |
 
-**33 outils.** Dix-huit d'entre eux ne demandent **aucune clé d'API** : NVD, le
-catalogue CISA et EPSS sont publics, et le corpus ATT&CK est embarqué. Les neuf
-outils MITRE fonctionnent **sans le moindre accès réseau**.
+**39 outils.** Vingt-quatre d'entre eux ne demandent **aucune clé d'API** : NVD,
+le catalogue CISA et EPSS sont publics, le corpus ATT&CK est embarqué, et
+l'inspection TLS ouvre sa propre connexion.
+
+Douze fonctionnent même **sans accès Internet** — les neuf outils MITRE parce
+que le corpus est local, et l'inspection TLS, DNS et en-têtes parce qu'elles
+visent l'hôte directement, y compris un hôte **interne** qu'aucun service en
+ligne ne pourrait atteindre.
 
 Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
@@ -150,7 +156,7 @@ les trames JSON.
 ## Développement
 
 ```bash
-pytest              # 571 tests
+pytest              # 609 tests
 ruff check src tests
 mypy src            # mode strict
 pre-commit install  # contrôles avant chaque commit
@@ -161,8 +167,8 @@ python demo.py      # investigation de démonstration
 
 | | |
 |---|---|
-| Outils | 33 au total, tous en lecture seule ; 18 sans aucune clé d'API |
-| Tests | 571, sans clé ni tenant requis |
+| Outils | 39 au total, tous en lecture seule ; 24 sans aucune clé d'API |
+| Tests | 609, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
 | Conteneur | vérifié via un vrai client MCP : démarrage 2,4 s, appel d'outil ~110 ms |
@@ -630,3 +636,106 @@ Un test vérifie désormais que **les 697 techniques portent leur détection**.
   qu'elle a été retirée et renvoie vers `T1685`.
 - **Rapprocher approximativement.** Un constat hors vocabulaire est listé dans
   `unmapped`. Une correspondance fausse est pire qu'une correspondance absente.
+
+---
+
+## Le serveur de reconnaissance web et TLS
+
+```bash
+web-recon-mcp --check         # vérifie les quatre chemins d'analyse
+```
+
+Six outils, aucune clé d'API. **Trois d'entre eux n'interrogent aucune API** :
+ils ouvrent eux-mêmes la connexion et lisent ce que l'hôte présente.
+
+Cela a deux conséquences concrètes. Ils fonctionnent sur un **hôte interne**,
+qu'un service en ligne ne pourrait jamais atteindre. Et la note ne change pas
+parce qu'un prestataire a modifié son barème.
+
+### Ce que `check_tls` regarde et que les autres oublient
+
+Le certificat, tout le monde le lit. Le constat qui compte est ailleurs :
+**quelles versions du protocole restent acceptées**. Un serveur qui négocie
+TLS 1.3 avec un navigateur moderne peut très bien accepter TLS 1.0 avec un
+client qui le demande — et c'est exactement ce qu'un attaquant demandera.
+
+Chaque version est donc testée **séparément**, par une connexion dédiée :
+
+```
+github.com        TLSv1 refusée · TLSv1.1 refusée · TLSv1.2 acceptée · TLSv1.3 acceptée
+teknologiia.com   TLSv1 refusée · TLSv1.1 refusée · TLSv1.2 refusée  · TLSv1.3 acceptée
+```
+
+> Une version marquée **« non testable » n'est pas « refusée »**. Les
+> bibliothèques récentes refusent de proposer TLS 1.0 côté client : on ne peut
+> alors rien conclure sur le serveur. Répondre « refusée » serait un faux
+> négatif — exactement l'erreur qu'un audit ne doit pas commettre.
+
+### Un piège silencieux du module `ssl` de Python
+
+Pour inspecter un certificat **expiré ou auto-signé**, il faut désactiver la
+vérification. Or dans ce mode, `getpeercert()` rend un dictionnaire **vide** :
+la connexion réussit, la structure est vide, et l'audit conclut que tout va
+bien.
+
+Le certificat est donc récupéré sous forme brute et décodé avec
+`cryptography`. On y gagne au passage ce que le module `ssl` ne donnait pas :
+type et taille de clé, algorithme de signature — donc la détection d'une clé
+RSA de 1024 bits ou d'une signature SHA-1.
+
+### Certains constats tranchent au lieu de s'additionner
+
+Un certificat **expiré** ressortait en gravité `medium` : la pénalité de 40
+points le laissait à 60/100, et 60 tombe dans la tranche « moyen ». C'est
+absurde — le navigateur le refuse, le service est rompu.
+
+Un test l'a révélé, et la correction porte sur la conception plutôt que sur le
+chiffre : certains constats posent un **plancher de gravité** que la note ne
+peut pas adoucir. Même logique que le catalogue KEV côté vulnérabilités — un
+fait qui domine un score.
+
+### L'alias pendant, le défaut le plus grave que ce serveur détecte
+
+`check_dns_hygiene` sonde seize sous-domaines courants à la recherche d'un
+CNAME pointant vers un service infogéré **qui ne répond plus**.
+
+Quiconque réenregistre ce service reçoit alors le trafic d'un sous-domaine
+légitime — et peut faire émettre un certificat valide à son nom.
+
+Une résolution simplement incertaine n'est **jamais** rapportée comme un alias
+pendant : envoyer une équipe sur une fausse piste coûte plus cher que de se
+taire. Les trois autres contrôles : DNSSEC, enregistrements CAA, et transfert
+de zone ouvert.
+
+### Les sous-domaines des autres ne sont pas les vôtres
+
+Les journaux de transparence des certificats sont la meilleure source de
+découverte qui soit. Mais les hébergeurs mutualisés regroupent des dizaines de
+clients dans un même certificat.
+
+Relevé réel sur `teknologiia.com` :
+
+```
+269 noms trouvés dans les journaux
+ 16 appartiennent réellement au domaine
+253 appartiennent à d'autres entreprises  →  exclus
+```
+
+Un relais aurait listé les 269 comme « vos sous-domaines ». La comparaison
+porte sur les **étiquettes**, pas sur le texte — sinon
+`faux-teknologiia.com` passerait pour un sous-domaine.
+
+### Un audit complet, en parallèle
+
+```
+teknologiia.com — note 78/100 [medium]
+
+  TLS       100/100   TLS 1.3 uniquement
+  En-têtes   60/100   C — CSP et permissions-policy absentes
+  DNS        75/100   DNSSEC non signé, aucun CAA
+  Sous-dom.  16 à nous, 253 tiers exclus
+```
+
+Une analyse en échec n'annule pas les autres : son absence est signalée et la
+note ne porte que sur ce qui a pu être mesuré. Une note calculée sur des
+données partielles qui ne le dirait pas serait trompeuse.
