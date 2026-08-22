@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 from collections.abc import AsyncIterator, Callable, Iterable
 from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
@@ -94,6 +95,30 @@ CE QUE LES OUTILS REFUSENT DE FAIRE
 """
 
 
+#: Un substituant que l'hôte n'a pas remplacé, par exemple
+#: « ${user_config.azure_tenant_id} ».
+_SUBSTITUANT = re.compile(r"^\$\{[^}]*\}$")
+
+
+def _config(nom: str) -> str | None:
+    """Lit une variable d'environnement, ou None si elle ne vaut rien.
+
+    **Le piège que cette fonction existe pour éviter.** Quand un champ
+    facultatif du paquet MCPB est laissé vide, Claude Desktop transmet le
+    substituant *littéral* — la variable contient alors la chaîne
+    « ${user_config.azure_tenant_id} », pas une chaîne vide.
+
+    Un simple test de vérité la juge donc renseignée. C'est exactement ce qui
+    s'est produit à la première installation réelle : le domaine identité
+    s'activait, azure-identity refusait ce faux identifiant de tenant, et le
+    serveur entier mourait au démarrage. Les 29 outils sans clé partaient avec.
+    """
+    valeur = (os.environ.get(nom) or "").strip()
+    if not valeur or _SUBSTITUANT.match(valeur):
+        return None
+    return valeur
+
+
 def _clefs_renseignement() -> bool:
     """Le domaine « renseignement » a-t-il au moins une clé ?
 
@@ -101,16 +126,14 @@ def _clefs_renseignement() -> bool:
     ni AbuseIPDB, les verdicts reposeraient sur une source unique, ce que la
     fusion refuse justement de traiter comme concluant.
     """
-    return bool(os.environ.get("VIRUSTOTAL_API_KEY") or os.environ.get("ABUSEIPDB_API_KEY"))
+    return bool(_config("VIRUSTOTAL_API_KEY") or _config("ABUSEIPDB_API_KEY"))
 
 
 def _clefs_identite() -> bool:
     """Le domaine « identité » a-t-il de quoi joindre un tenant ?"""
-    if os.environ.get("ENTRA_DATA_SOURCE", "").lower() == "fixture":
+    if (_config("ENTRA_DATA_SOURCE") or "").lower() == "fixture":
         return True
-    return all(
-        os.environ.get(v) for v in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET")
-    )
+    return all(_config(v) for v in ("AZURE_TENANT_ID", "AZURE_CLIENT_ID", "AZURE_CLIENT_SECRET"))
 
 
 def domaines_actifs() -> dict[str, bool]:
@@ -144,15 +167,34 @@ async def lifespan(_server: Any) -> AsyncIterator[None]:
         await pile.enter_async_context(web(None))
         await pile.enter_async_context(messagerie(None))
 
+        # Un domaine facultatif qui refuse de démarrer ne doit pas emporter
+        # les autres. C'est le second enseignement de la même panne : une clé
+        # erronée faisait perdre les 29 outils qui n'en demandent aucune.
         if actifs["renseignement"]:
             from threat_intel_mcp.runtime import lifespan as renseignement
 
-            await pile.enter_async_context(renseignement(None))
+            try:
+                await pile.enter_async_context(renseignement(None))
+            except Exception as exc:
+                actifs["renseignement"] = False
+                logger.error(
+                    "Renseignement sur les menaces non démarré (%s) : ses outils ne "
+                    "seront pas exposés, les autres restent disponibles.",
+                    exc,
+                )
 
         if actifs["identite"]:
             from entra_secops_mcp.runtime import lifespan as identite
 
-            await pile.enter_async_context(identite(None))
+            try:
+                await pile.enter_async_context(identite(None))
+            except Exception as exc:
+                actifs["identite"] = False
+                logger.error(
+                    "Identité Entra non démarrée (%s) : ses outils ne seront pas "
+                    "exposés, les autres restent disponibles.",
+                    exc,
+                )
 
         exposes = [nom for nom, actif in actifs.items() if actif]
         logger.info("ARGUS prêt — domaines exposés : %s.", ", ".join(exposes))
