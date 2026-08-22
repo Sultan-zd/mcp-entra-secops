@@ -1,0 +1,267 @@
+{
+  "manifest_version": "0.4",
+  "name": "argus-secops",
+  "display_name": "ARGUS — Plateforme SecOps",
+  "version": "1.0.0",
+  "description": "39 outils SecOps en lecture seule : CVE/KEV/EPSS, MITRE ATT&CK hors ligne, TLS, DNS, SPF/DKIM/DMARC, reputation d'indicateurs, Entra ID.",
+  "long_description": "ARGUS expose la telemetrie de securite comme outils executables par un agent. Vingt-neuf outils fonctionnent SANS AUCUNE CLE d'API : vulnerabilites (NVD, catalogue CISA des failles activement exploitees, probabilite d'exploitation EPSS), MITRE ATT&CK avec son corpus embarque — donc utilisable hors ligne —, inspection TLS par connexion directe, hygiene DNS (DNSSEC, CAA, alias pendants), en-tetes de securite, transparence des certificats, et posture de messagerie SPF/DKIM/DMARC. Dix outils supplementaires s'activent si vous fournissez vos propres cles VirusTotal, AbuseIPDB ou un tenant Microsoft Entra.\n\nCe n'est pas un relais d'API. Les notes CVSS sont RECALCULEES localement a partir du vecteur et confrontees a 138 vecteurs reels du NVD ; le classement des vulnerabilites est deterministe et par paliers ; l'inspection TLS ouvre sa propre connexion, ce qui fonctionne aussi sur un hote interne. Tous les outils sont en LECTURE SEULE : rien n'est jamais modifie.",
+  "author": {
+    "name": "Sultan Zeineddine",
+    "url": "https://github.com/Sultan-zd"
+  },
+  "homepage": "https://github.com/Sultan-zd/mcp-entra-secops",
+  "documentation": "https://github.com/Sultan-zd/mcp-entra-secops#readme",
+  "support": "https://github.com/Sultan-zd/mcp-entra-secops/issues",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sultan-zd/mcp-entra-secops"
+  },
+  "license": "MIT",
+  "keywords": [
+    "security",
+    "secops",
+    "cve",
+    "kev",
+    "epss",
+    "mitre",
+    "attack",
+    "tls",
+    "dns",
+    "spf",
+    "dmarc",
+    "dkim",
+    "entra",
+    "soc"
+  ],
+  "server": {
+    "type": "uv",
+    "entry_point": "server/main.py",
+    "mcp_config": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "${__dirname}",
+        "server/main.py"
+      ],
+      "env": {
+        "VIRUSTOTAL_API_KEY": "${user_config.virustotal_api_key}",
+        "ABUSEIPDB_API_KEY": "${user_config.abuseipdb_api_key}",
+        "AZURE_TENANT_ID": "${user_config.azure_tenant_id}",
+        "AZURE_CLIENT_ID": "${user_config.azure_client_id}",
+        "AZURE_CLIENT_SECRET": "${user_config.azure_client_secret}",
+        "MAIL_DNS_NAMESERVERS": "${user_config.dns_resolvers}"
+      }
+    }
+  },
+  "user_config": {
+    "virustotal_api_key": {
+      "type": "string",
+      "title": "Cle VirusTotal (facultatif)",
+      "description": "Active les outils de reputation d'indicateurs. Le palier gratuit suffit. Sans cle, les 29 autres outils fonctionnent.",
+      "sensitive": true,
+      "required": false
+    },
+    "abuseipdb_api_key": {
+      "type": "string",
+      "title": "Cle AbuseIPDB (facultatif)",
+      "description": "Deuxieme source de reputation. Croiser deux sources evite de conclure sur un avis unique.",
+      "sensitive": true,
+      "required": false
+    },
+    "azure_tenant_id": {
+      "type": "string",
+      "title": "Identifiant de tenant Entra (facultatif)",
+      "description": "Active les six outils d'identite. Exige une licence Entra ID P1 pour les journaux de connexion, P2 pour Identity Protection.",
+      "required": false
+    },
+    "azure_client_id": {
+      "type": "string",
+      "title": "Identifiant d'application Entra (facultatif)",
+      "description": "Inscription d'application avec permissions en lecture seule.",
+      "required": false
+    },
+    "azure_client_secret": {
+      "type": "string",
+      "title": "Secret client Entra (facultatif)",
+      "description": "Ce secret donne acces en LECTURE a la telemetrie d'identite du tenant. Revoquez-le des qu'il n'est plus necessaire.",
+      "sensitive": true,
+      "required": false
+    },
+    "dns_resolvers": {
+      "type": "string",
+      "title": "Resolveurs DNS",
+      "description": "Beaucoup de resolveurs de fournisseurs d'acces ne rendent pas les reponses TXT volumineuses, ce qui fait echouer l'analyse de messagerie sur les gros domaines.",
+      "default": "8.8.8.8,1.1.1.1",
+      "required": false
+    }
+  },
+  "compatibility": {
+    "platforms": [
+      "win32",
+      "darwin",
+      "linux"
+    ],
+    "runtimes": {
+      "python": ">=3.11"
+    }
+  },
+  "tools": [
+    {
+      "name": "lookup_cve",
+      "description": "Fiche complète d'une vulnérabilité, croisée entre NVD, CISA KEV et EPSS."
+    },
+    {
+      "name": "prioritize_cves",
+      "description": "Classe des vulnérabilités dans l'ordre où il faut les corriger."
+    },
+    {
+      "name": "check_kev",
+      "description": "Cette vulnérabilité est-elle activement exploitée ? Le catalogue CISA ne liste que des failles dont l'exploitation est **constatée**, pas supposée."
+    },
+    {
+      "name": "search_cve",
+      "description": "Cherche des vulnérabilités par mots-clés."
+    },
+    {
+      "name": "cve_for_product",
+      "description": "Vulnérabilités affectant une version précise d'un produit."
+    },
+    {
+      "name": "bulk_lookup_cve",
+      "description": "Fiches de plusieurs vulnérabilités d'un coup."
+    },
+    {
+      "name": "get_epss",
+      "description": "Probabilité d'exploitation à trente jours, pour une ou plusieurs CVE."
+    },
+    {
+      "name": "kev_catalog_stats",
+      "description": "État du catalogue CISA des vulnérabilités activement exploitées."
+    },
+    {
+      "name": "check_web_exposure",
+      "description": "Audit complet d'un domaine : TLS, en-têtes, hygiène DNS, sous-domaines."
+    },
+    {
+      "name": "check_tls",
+      "description": "Inspecte la configuration TLS d'un hôte, par connexion directe."
+    },
+    {
+      "name": "check_certificate_expiry",
+      "description": "Vérifie l'expiration des certificats de plusieurs hôtes d'un coup."
+    },
+    {
+      "name": "check_security_headers",
+      "description": "Récupère une page et note ses en-têtes de sécurité sur 100."
+    },
+    {
+      "name": "check_dns_hygiene",
+      "description": "Quatre contrôles DNS que presque personne ne fait."
+    },
+    {
+      "name": "find_subdomains",
+      "description": "Découvre les sous-domaines via les journaux de transparence des certificats."
+    },
+    {
+      "name": "check_domain_posture",
+      "description": "Évalue SPF, DKIM et DMARC ensemble, et rend une note de 0 à 100 assortie d'actions classées par gain de sécurité décroissant."
+    },
+    {
+      "name": "check_spf",
+      "description": "Analyse l'enregistrement SPF d'un domaine et **compte les résolutions DNS qu'il déclenche**."
+    },
+    {
+      "name": "check_dkim",
+      "description": "Vérifie les clés DKIM publiées : présence, type, taille et état."
+    },
+    {
+      "name": "check_dmarc",
+      "description": "Lit la politique DMARC d'un domaine et évalue ce qu'elle protège réellement."
+    },
+    {
+      "name": "analyze_email_headers",
+      "description": "Détermine si un message reçu est usurpé, en vérifiant l'ALIGNEMENT."
+    },
+    {
+      "name": "lookup_technique",
+      "description": "Fiche complète d'une technique ATT&CK : description, détection, parades."
+    },
+    {
+      "name": "search_techniques",
+      "description": "Cherche des techniques par mots-clés, hors ligne."
+    },
+    {
+      "name": "map_findings_to_attack",
+      "description": "Traduit des constats d'ARGUS en techniques ATT&CK."
+    },
+    {
+      "name": "coverage_report",
+      "description": "Ce que vos détections ne couvrent pas encore."
+    },
+    {
+      "name": "list_tactics",
+      "description": "Les tactiques ATT&CK, c'est-à-dire les objectifs successifs d'un attaquant."
+    },
+    {
+      "name": "lookup_group",
+      "description": "Fiche d'un groupe d'attaquants suivi par MITRE."
+    },
+    {
+      "name": "build_navigator_layer",
+      "description": "Produit une couche pour l'ATT&CK Navigator."
+    },
+    {
+      "name": "list_known_findings",
+      "description": "Le vocabulaire de constats que `map_findings_to_attack` sait traduire."
+    },
+    {
+      "name": "corpus_info",
+      "description": "Version et contenu du corpus ATT&CK embarqué."
+    },
+    {
+      "name": "parse_cvss",
+      "description": "Décode un vecteur CVSS et **recalcule** la note, sans rien interroger."
+    },
+    {
+      "name": "enrich_ip",
+      "description": "Établit la réputation d'une adresse IP en croisant VirusTotal, AbuseIPDB et GreyNoise, et rend un verdict unique de 0 à 100."
+    },
+    {
+      "name": "enrich_domain",
+      "description": "Établit la réputation d'un nom de domaine auprès de VirusTotal."
+    },
+    {
+      "name": "enrich_file_hash",
+      "description": "Établit la réputation d'un fichier à partir de son condensat."
+    },
+    {
+      "name": "bulk_enrich",
+      "description": "Analyse plusieurs indicateurs en une seule fois et rend une synthèse chiffrée, triée du plus malveillant au plus bénin."
+    },
+    {
+      "name": "get_user_context",
+      "description": "Récupère la fiche d'identité d'un compte : poste, département, état, groupes d'appartenance et rôles d'annuaire détenus."
+    },
+    {
+      "name": "get_conditional_access_policies",
+      "description": "Liste les politiques d'accès conditionnel du tenant, avec leur état réel d'application."
+    },
+    {
+      "name": "get_user_signins",
+      "description": "Récupère les connexions récentes d'un utilisateur pour investiguer un blocage d'authentification, une anomalie géographique ou une compromission."
+    },
+    {
+      "name": "get_risky_users",
+      "description": "Liste les comptes signalés à risque par Entra Identity Protection, du plus risqué au moins risqué."
+    },
+    {
+      "name": "get_risk_detections",
+      "description": "Récupère les détections de risque unitaires : identifiants divulgués, IP anonymisée, voyage impossible, pulvérisation de mots de passe."
+    },
+    {
+      "name": "get_directory_audits",
+      "description": "Récupère les modifications administratives récentes de l'annuaire, afin d'identifier une dérive de configuration ou un changement non autorisé."
+    }
+  ]
+}

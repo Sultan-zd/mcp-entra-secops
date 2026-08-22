@@ -6,6 +6,8 @@ import argparse
 import asyncio
 import logging
 
+from argus_net import forcer_utf8
+
 from .runtime import build_http, configure_logging
 from .server import build_server
 
@@ -72,6 +74,8 @@ async def _run_check() -> int:
 
 
 def main() -> None:
+    # Avant tout affichage : la console Windows est en cp1252 par defaut.
+    forcer_utf8()
     parser = argparse.ArgumentParser(
         prog="web-recon-mcp",
         description="Serveur MCP de reconnaissance web et TLS, sans clé d'API.",

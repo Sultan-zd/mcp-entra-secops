@@ -6,6 +6,8 @@ import argparse
 import logging
 import sys
 
+from argus_net import forcer_utf8
+
 from .corpus import CorpusError, charger
 from .mapping import TOUTES
 from .server import build_server
@@ -69,6 +71,8 @@ def _run_check() -> int:
 
 
 def main() -> None:
+    # Avant tout affichage : la console Windows est en cp1252 par defaut.
+    forcer_utf8()
     parser = argparse.ArgumentParser(
         prog="mitre-attack-mcp",
         description="Serveur MCP MITRE ATT&CK, entièrement hors ligne.",

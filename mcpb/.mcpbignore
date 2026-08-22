@@ -1,0 +1,6 @@
+# Rien de tout cela n'a sa place dans un paquet distribue.
+__pycache__/
+*.pyc
+.venv/
+.uv/
+uv.lock

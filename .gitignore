@@ -42,3 +42,11 @@ desktop.ini
 # verdicts : de la telemetrie de tenant, qui n'a rien a faire dans un depot.
 data/
 rapport-evaluation.json
+
+# ---- Paquet MCPB ----------------------------------------------------------
+# L'artefact se reconstruit avec `mcpb pack mcpb <nom>.mcpb` ; le versionner
+# ajouterait 636 Ko de binaire a chaque changement de code.
+*.mcpb
+mcpb/src/
+mcpb/.venv/
+mcpb/uv.lock

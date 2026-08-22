@@ -6,6 +6,8 @@ import argparse
 import asyncio
 import logging
 
+from argus_net import forcer_utf8
+
 from .config import get_settings
 from .runtime import build_sources, configure_logging
 from .server import build_server
@@ -87,6 +89,8 @@ async def _run_check() -> int:
 
 
 def main() -> None:
+    # Avant tout affichage : la console Windows est en cp1252 par defaut.
+    forcer_utf8()
     parser = argparse.ArgumentParser(
         prog="vuln-intel-mcp",
         description="Serveur MCP de renseignement sur les vulnérabilités (NVD, CISA KEV, EPSS).",

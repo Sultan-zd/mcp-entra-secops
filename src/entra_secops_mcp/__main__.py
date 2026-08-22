@@ -6,6 +6,8 @@ import argparse
 import logging
 import sys
 
+from argus_net import forcer_utf8
+
 from .config import get_settings
 from .diagnostics import check
 from .runtime import configure_logging
@@ -16,6 +18,8 @@ logger = logging.getLogger(__name__)
 
 def main() -> None:
     """Démarre le serveur MCP sur le transport demandé."""
+    # Avant tout affichage : la console Windows est en cp1252 par defaut.
+    forcer_utf8()
     parser = argparse.ArgumentParser(
         prog="entra-secops-mcp",
         description="Serveur MCP exposant les journaux de sécurité Microsoft Entra ID.",

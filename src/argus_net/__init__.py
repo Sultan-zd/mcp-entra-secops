@@ -6,6 +6,7 @@ pannes à traiter sans faire échouer l'investigation entière. Rassembler ces
 mécanismes ici évite qu'une correction n'atteigne qu'un serveur sur cinq.
 """
 
+from .console import forcer_utf8
 from .feeds import FeedCache, FeedError
 from .http import HttpError, PublicHttpClient
 from .ratelimit import QuotaExceededError, RateLimiterRegistry, TokenBucket
@@ -18,4 +19,5 @@ __all__ = [
     "QuotaExceededError",
     "RateLimiterRegistry",
     "TokenBucket",
+    "forcer_utf8",
 ]

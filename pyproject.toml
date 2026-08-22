@@ -52,6 +52,7 @@ email-security-mcp = "email_security_mcp.__main__:main"
 vuln-intel-mcp = "vuln_intel_mcp.__main__:main"
 mitre-attack-mcp = "mitre_mcp.__main__:main"
 web-recon-mcp = "web_recon_mcp.__main__:main"
+argus-mcp = "argus_bundle.__main__:main"
 argus-agent = "argus_agent.__main__:main"
 argus-eval = "argus_eval.__main__:main"
 argus-console = "argus_console.__main__:main"
@@ -69,6 +70,7 @@ packages = [
     "src/vuln_intel_mcp",
     "src/mitre_mcp",
     "src/web_recon_mcp",
+    "src/argus_bundle",
 ]
 
 # ---------------------------------------------------------------------------

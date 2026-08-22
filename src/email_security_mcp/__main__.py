@@ -7,6 +7,8 @@ import asyncio
 import logging
 import sys
 
+from argus_net import forcer_utf8
+
 from .config import Settings, get_settings
 from .runtime import configure_logging, lifespan
 from .server import build_server
@@ -64,6 +66,8 @@ async def _run_check(settings: Settings, domaines: list[str]) -> int:
 
 def main() -> None:
     """Démarre le serveur MCP sur le transport demandé."""
+    # Avant tout affichage : la console Windows est en cp1252 par defaut.
+    forcer_utf8()
     parser = argparse.ArgumentParser(
         prog="email-security-mcp",
         description="Serveur MCP d'analyse SPF, DKIM, DMARC et d'en-têtes de messagerie.",
