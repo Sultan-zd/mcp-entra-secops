@@ -26,8 +26,6 @@ Ce document va du plus simple au plus complet :
 
 ## 1. Installation
 
-### Installation
-
 ```bash
 cd mcp-entra-secops
 
@@ -244,12 +242,6 @@ async def main() -> None:
 asyncio.run(main())
 ```
 
-Puis :
-
-```bash
-python demo.py
-```
-
 Sortie attendue :
 
 ```
@@ -329,9 +321,21 @@ notification, puis rouvrez-la. Un simple rechargement ne suffit pas.
 
 ### Étape 4 — vérifier la connexion
 
-Une icône d'outils apparaît dans la zone de saisie. En cliquant dessus, les
-outils doivent être listés — **35** si vous avez déclaré les cinq serveurs
-ci-dessus.
+**Il n'y a plus d'icône d'outils dans la zone de saisie** dans les versions
+récentes de Claude Desktop. Les serveurs déclarés dans ce fichier apparaissent
+dans **Réglages → Connecteurs** (ou *Extensions*), au même endroit que les
+extensions `.mcpb` installées depuis le catalogue.
+
+Contrairement à une extension, **un serveur déclaré ici ne s'affiche nulle part
+tant qu'une question ne le déclenche pas.** Ne concluez pas à un échec parce que
+vous ne voyez rien : posez d'abord une question de l'étape 5.
+
+La preuve définitive qu'un serveur démarre est dans son journal (voir plus bas).
+Cherchez la ligne :
+
+```
+[votre-serveur] [info] Server started and connected successfully
+```
 
 ### Étape 5 — poser les questions
 
@@ -395,8 +399,16 @@ Journaux de Claude Desktop :
 
 | Système | Chemin |
 |---|---|
-| Windows | `%APPDATA%\Claude\logs\` |
+| Windows | `%LOCALAPPDATA%\Claude\logs\` |
 | macOS | `~/Library/Logs/Claude/` |
+
+> **Attention au dossier.** C'est `%LOCALAPPDATA%` (…`\AppData\Local\`…), **pas**
+> `%APPDATA%` (…`\AppData\Roaming\`…). Le second contient des journaux
+> périmés d'anciennes versions, ce qui fait croire à tort qu'aucun serveur n'a
+> démarré.
+
+Chaque serveur a son propre fichier, nommé d'après la clé du fichier de
+configuration : `mcp-server-argus-menaces.log`, `mcp-server-entra-secops.log`…
 
 ---
 
