@@ -12,30 +12,36 @@ la fin.
 1. [En une phrase](#1--en-une-phrase)
 2. [Le problème qu'on résout](#2--le-problème-quon-résout)
 3. [C'est quoi, un « serveur MCP » ?](#3--cest-quoi-un--serveur-mcp)
-4. [Les six serveurs et leurs 39 outils](#4--les-six-serveurs-et-leurs-39-outils)
+4. [Les sept serveurs et leurs 46 outils](#4--les-sept-serveurs-et-leurs-46-outils)
 5. [Pourquoi ce n'est pas un simple relais d'API](#5--pourquoi-ce-nest-pas-un-simple-relais-dapi)
 6. [L'agent : celui qui enchaîne les outils](#6--lagent--celui-qui-enchaîne-les-outils)
 7. [Comment le verdict est calculé](#7--comment-le-verdict-est-calculé)
 8. [Le harnais d'évaluation : la preuve chiffrée](#8--le-harnais-dévaluation--la-preuve-chiffrée)
-9. [La console analyste](#9--la-console-analyste)
-10. [L'observabilité : ce que ça coûte vraiment](#10--lobservabilité--ce-que-ça-coûte-vraiment)
-11. [Les règles de sécurité qui ne bougent pas](#11--les-règles-de-sécurité-qui-ne-bougent-pas)
-12. [Comment lancer et tester le projet](#12--comment-lancer-et-tester-le-projet)
-13. [Ce qui a été vérifié pour de vrai](#13--ce-qui-a-été-vérifié-pour-de-vrai)
-14. [La carte des fichiers](#14--la-carte-des-fichiers)
-15. [Glossaire](#glossaire)
+9. [Les règles de sécurité qui ne bougent pas](#9--les-règles-de-sécurité-qui-ne-bougent-pas)
+10. [Comment lancer et tester le projet](#10--comment-lancer-et-tester-le-projet)
+11. [Ce qui a été vérifié pour de vrai](#11--ce-qui-a-été-vérifié-pour-de-vrai)
+12. [La carte des fichiers](#12--la-carte-des-fichiers)
+13. [Glossaire](#glossaire)
 
 ---
 
 ## 1 · En une phrase
 
-> **ARGUS permet à un analyste de sécurité de poser une question en français —
-> « pourquoi ce compte n'arrive-t-il plus à se connecter ? » — et d'obtenir en
-> quelques secondes un dossier d'enquête complet, fondé sur les vraies données
-> de l'entreprise.**
+> **ARGUS est une extension `.mcpb` qu'un analyste de sécurité installe d'un
+> double-clic. Elle donne à son modèle IA 46 outils en lecture seule — de sorte
+> qu'il peut poser sa question en français, « pourquoi ce compte n'arrive-t-il
+> plus à se connecter ? », et obtenir en quelques secondes un dossier d'enquête
+> fondé sur les vraies données de l'entreprise.**
 
-Le reste de ce document explique comment, et surtout **pourquoi chaque choix a
-été fait ainsi**.
+Un fichier de 678 Ko. Aucune ligne de commande, aucun dépôt à cloner. Le
+destinataire installe `uv` une fois, double-clique, et **36 des 46 outils
+fonctionnent immédiatement, sans aucune clé d'API**.
+
+Ce que ce document explique, c'est ce qu'il y a **dedans** : sept serveurs MCP
+spécialisés, et surtout **pourquoi chaque choix a été fait ainsi**.
+
+> Pour installer ou distribuer l'extension : [`INSTALLER.md`](INSTALLER.md).
+> Pour travailler sur le code : [`SETUP.md`](SETUP.md).
 
 ---
 
@@ -95,7 +101,7 @@ séquence est écrite dans le code, pas dans la mémoire d'une personne fatigué
 
 ARGUS **ne remplace pas l'analyste**. Il prépare le dossier. La décision — et
 surtout l'action de remédiation — reste humaine. C'est un choix délibéré, et on
-y revient en [section 11](#11--les-règles-de-sécurité-qui-ne-bougent-pas).
+y revient en [section 9](#9--les-règles-de-sécurité-qui-ne-bougent-pas).
 
 ---
 
@@ -141,18 +147,18 @@ Deux détails techniques qui ont des conséquences réelles :
   il corrompt la trame JSON et la conversation casse. **Tous les messages de
   journalisation partent donc sur `stderr`**, le canal d'erreur.
 
-- **Pas de pseudo-terminal.** En Docker, on lance avec `-i` (garder l'entrée
-  ouverte) mais **jamais `-t`** : un terminal injecte des codes de couleur qui
-  corrompent, là encore, le JSON.
+- **Pas de pseudo-terminal.** Quel que soit l'hôte qui lance le serveur, il
+  doit garder l'entrée standard ouverte **sans** allouer de terminal : un
+  terminal injecte des codes de couleur qui corrompent, là encore, le JSON.
 
 Ce sont deux erreurs classiques qui font perdre des heures. Elles sont
 documentées ici pour que personne ne les refasse.
 
 ---
 
-## 4 · Les six serveurs et leurs 39 outils
+## 4 · Les sept serveurs et leurs 46 outils
 
-ARGUS n'est pas un serveur, mais **six**, chacun spécialisé dans un domaine.
+ARGUS n'est pas un serveur, mais **sept**, chacun spécialisé dans un domaine.
 Plus un agent qui les orchestre.
 
 | Serveur | Domaine | Outils | Clé d'API ? |
@@ -162,12 +168,14 @@ Plus un agent qui les orchestre.
 | `email-security-mcp` | SPF, DKIM, DMARC | 5 | **Aucune** |
 | `vuln-intel-mcp` | Vulnérabilités : CVE, KEV, EPSS | 9 | **Aucune** |
 | `mitre-attack-mcp` | Référentiel MITRE ATT&CK | 9 | **Aucune** — hors ligne |
+| `detection-mcp` | Indicateurs, règles Sigma, couverture | 7 | **Aucune** — hors ligne |
 | `web-recon-mcp` | TLS, en-têtes, DNS, certificats | 6 | **Aucune** |
 
-**24 outils sur 39 ne demandent aucune clé.** Et douze fonctionnent même sans
-accès Internet.
+**36 outils sur 46 ne demandent aucune clé.** Et **dix-sept ne touchent pas au
+réseau du tout** : les neuf outils ATT&CK, les sept outils de détection, et le
+calcul CVSS.
 
-### Pourquoi six serveurs et pas un seul ?
+### Pourquoi sept serveurs et pas un seul ?
 
 Le cloisonnement n'est pas cosmétique : **la clé VirusTotal et le secret Entra
 ne vivent pas dans le même processus**. Si l'un des deux est compromis, l'autre
@@ -296,6 +304,49 @@ service en ligne ne pourrait jamais atteindre.
 | `check_security_headers` | Ce site est-il durci ? |
 | `check_dns_hygiene` | Mon DNS a-t-il des failles ? |
 | `find_subdomains` | Qu'ai-je exposé sans le savoir ? |
+
+### Serveur 7 — `detection-mcp` · l'ingénierie de détection
+
+Aucune clé, et **aucun réseau**. C'est ce qui compte ici : un rapport de menace
+encore confidentiel, un courriel signalé par un utilisateur, une règle en cours
+d'écriture — rien de tout cela ne quitte le poste.
+
+| Outil | Ce qu'il répond |
+|---|---|
+| `extract_iocs` | **Que retenir de ce rapport ?** (adresses, domaines, URL, empreintes, CVE) |
+| `analyze_sigma_rule` | **Cette règle est-elle exploitable en production ?** |
+| `explain_sigma_rule` | Que fait cette règle, en français, sans lire le YAML ? |
+| `convert_sigma_rule` | Comment la déployer dans Sentinel, Splunk ou Elastic ? |
+| `check_detection_coverage` | **Où sont nos angles morts ?** |
+| `suggest_detection_for_technique` | On veut couvrir T1566, on fait quoi ? |
+| `defang_iocs` | Comment partager ces indicateurs sans risque de clic ? |
+
+**Ce que ce serveur délègue, et ce qu'il apporte.** La lecture et la conversion
+des règles Sigma sont faites par `pysigma`, la bibliothèque de référence.
+Réimplémenter la spécification serait une faute : elle comporte des dizaines de
+modificateurs, et se tromper sur l'un d'eux produit une règle qui *paraît*
+correcte et rate silencieusement les attaques qu'elle prétend détecter.
+
+Ce que le serveur ajoute, aucune bibliothèque ne le fait :
+
+* **Vérifier que les étiquettes ATT&CK sont encore valides.** ATT&CK révoque des
+  techniques à chaque version majeure — 161 dans la v19 embarquée. Une règle
+  étiquetée d'un identifiant mort fonctionne parfaitement, mais ne compte dans
+  aucune revue de couverture, et rien ne le signale.
+* **Vérifier que la technique correspond à la source de journal.** Une règle sur
+  les journaux Azure étiquetée d'une technique Windows ne détectera jamais ce
+  qu'elle annonce.
+* **Noter la règle sur ce qui décide de son sort en production** : source de
+  journal déclarée, faux positifs annoncés, condition pas trop large. Une règle
+  qui n'annonce pas son bruit est désactivée au premier jour chargé, et rarement
+  réactivée.
+
+Pour l'extraction d'indicateurs, deux pièges sont traités que les expressions
+régulières naïves manquent : les indicateurs **désamorcés** (`hxxp://`, `[.]`,
+`(@)`) — un rapport de menace les écrit ainsi *précisément* pour qu'on ne clique
+pas — et les **adresses internes**, qui ne sont jamais proposées comme
+indicateurs à vérifier chez un tiers. Chaque valeur écartée est rendue **avec
+son motif**, pour qu'on ne croie pas l'extraction défaillante.
 
 ---
 
@@ -481,7 +532,7 @@ protection, une seule investigation épuiserait le quota.
 
 ## 6 · L'agent : celui qui enchaîne les outils
 
-Les 39 outils sont utilisables un par un. L'agent les **enchaîne
+Les 46 outils sont utilisables un par un. L'agent les **enchaîne
 automatiquement** selon le type d'alerte.
 
 ### Les 5 playbooks
@@ -687,114 +738,7 @@ faire condamner un cas bénin.
 
 ---
 
-## 9 · La console analyste
-
-```bash
-pip install -e ".[console]"
-argus-console          # http://127.0.0.1:8000
-```
-
-### Le flux, pas le sablier
-
-Un agent qu'on ne voit pas travailler n'est pas adopté. **On ne fait pas
-confiance à ce qu'on ne voit pas se produire.**
-
-La console diffuse donc **chaque étape au moment où elle se termine** :
-
-```
-event: step     get_user_context      compte privilégié
-event: step     get_user_signins      7 échecs, 3 succès
-event: step     get_risk_detections   3 détections
-event: step     bulk_enrich           1 indicateur malveillant
-event: step     get_directory_audits  4 gestes sensibles
-event: verdict  MALICIOUS · critical · 0.95 · escalade
-```
-
-Techniquement, c'est un **flux d'événements serveur** (SSE). Pourquoi pas une
-WebSocket ? Parce que la communication est **unidirectionnelle** — du serveur
-vers le navigateur. Une WebSocket serait surdimensionnée.
-
-Et si l'analyste ferme l'onglet, la tâche est **annulée côté serveur**. Sans
-cela, une investigation abandonnée continuerait de consommer du quota d'API.
-
-### La porte d'approbation consigne, elle n'exécute pas
-
-```
-POST /api/runs/{id}/approvals  →  { "executed": false, "recorded": {…} }
-```
-
-Lisez bien : **`executed: false`**. Toujours.
-
-La plateforme **ne détient aucun droit d'écriture** sur le tenant Microsoft.
-Une erreur de l'agent ne peut donc pas se traduire en incident. Ce qui est
-enregistré, c'est **qui a décidé quoi et quand** — l'exigence d'audit — pas
-l'exécution elle-même.
-
-Deux refus explicites protègent la trace :
-
-| Tentative | Réponse | Pourquoi |
-|---|---|---|
-| Approuver une action **jamais proposée** | `400` | Elle n'aurait aucune trace d'origine dans le dossier |
-| Une décision autre que `approved` / `rejected` | `400` | Un état ambigu n'est pas auditable |
-
-### La console est locale par défaut
-
-`argus-console` écoute sur `127.0.0.1`, pas sur toutes les interfaces. Exposer
-une console d'investigation sans authentification donnerait la télémétrie de
-sécurité du tenant à **quiconque atteint le port**.
-
----
-
-## 10 · L'observabilité : ce que ça coûte vraiment
-
-### Le coût n'est pas en tokens
-
-La plupart des plateformes agentiques comptent des **tokens**, parce qu'un
-modèle de langage occupe leur boucle de décision.
-
-**Ici, il n'y en a pas.**
-
-Ce qui s'épuise réellement, c'est le **quota des API externes** — environ
-4 requêtes par minute au palier gratuit de VirusTotal. Compter des tokens
-inexistants donnerait un tableau de bord flatteur et **sans rapport avec la
-contrainte réelle**.
-
-```json
-{
-  "external_api_calls": { "virustotal": 2, "abuseipdb": 2, "greynoise": 2 },
-  "cache_hits": 4,
-  "dns_lookups": 0
-}
-```
-
-### Les chiffres sont dérivés, jamais estimés
-
-- Une source **tombée en panne** n'a rien consommé → elle n'est pas comptée.
-- Un indicateur servi par le **cache** compte comme cache, pas comme appel.
-
-Un test vérifie précisément ça, sur une réponse où GreyNoise est indisponible.
-
-### Deux couches de conservation
-
-| Couche | Rôle | Propriété |
-|---|---|---|
-| Anneau en mémoire (200 dossiers) | Affichage de la console | Éviction du plus ancien, **index purgé avec lui** |
-| `data/audit.jsonl` | Audit et conformité | **Ajout seul** |
-
-Pourquoi deux ? Parce que deux exigences différentes se rejoignent : la console
-a besoin des dossiers récents pour les afficher, la conformité a besoin
-qu'**aucun ne disparaisse**.
-
-Le journal est en **ajout seul** à dessein : *une trace qu'on peut réécrire ne
-prouve rien.*
-
-Et une panne d'écriture du journal **ne fait jamais perdre un verdict déjà
-rendu** — l'erreur est tracée, l'investigation suit son cours. Un test force
-l'échec d'écriture et vérifie que le dossier reste consultable.
-
----
-
-## 11 · Les règles de sécurité qui ne bougent pas
+## 9 · Les règles de sécurité qui ne bougent pas
 
 Ce sont les invariants du projet. Aucune évolution ne doit les casser.
 
@@ -823,29 +767,37 @@ Téléverser un fichier sur VirusTotal le rend **visible aux abonnés du service
 Un document interne envoyé « pour vérification » devient une fuite de données.
 ARGUS envoie l'empreinte (le *hash*), qui identifie le fichier sans le révéler.
 
-### 5. Aucun secret dans le code, ni dans l'image Docker
+### 5. Aucun secret dans le code, ni dans l'extension distribuée
 
-Les secrets sont injectés au démarrage via `--env-file`. Le fichier `.env` est
-exclu de git.
+Le fichier `.mcpb` ne contient que du code. Les clés sont saisies par le
+destinataire à l'installation, et l'hôte les transmet au serveur par variables
+d'environnement — une extension peut donc être partagée sans risque. En
+développement, elles vivent dans `.env`, exclu de git.
 
 > ⚠️ **Un secret poussé sur un dépôt doit être RÉVOQUÉ, pas seulement supprimé
 > du fichier.** Effacer une clé ne l'invalide pas : elle reste utilisable par
 > quiconque en a vu la valeur, jusqu'à révocation chez l'émetteur.
 
-### 6. Le journal d'audit n'est pas versionné
+### 6. Un champ de configuration vide n'est pas une valeur
 
-Le répertoire `data/` est exclu de git : les dossiers d'investigation portent
-des adresses de messagerie et des adresses IP — de la télémétrie de tenant, qui
-n'a rien à faire dans un dépôt.
+Quand un champ facultatif du manifeste est laissé vide, l'hôte transmet le
+substituant **littéral** `${user_config.azure_tenant_id}`. Un simple test de
+vérité le juge renseigné.
+
+C'est exactement ce qui s'est produit à la première installation réelle : le
+domaine identité s'activait, l'authentification refusait ce faux identifiant, et
+**le serveur entier mourait au démarrage** — emportant les 36 outils qui ne
+demandent aucune clé. Le serveur reconnaît désormais ces substituants et les
+traite comme absents.
 
 ---
 
-## 12 · Comment lancer et tester le projet
+## 10 · Comment lancer et tester le projet
 
 ### Prérequis
 
 - **Python 3.11, 3.12 ou 3.13**
-- Optionnel : Docker
+- Optionnel : `uv` et Node, pour construire l'extension `.mcpb`
 - Optionnel : un tenant Microsoft Entra ID, des clés VirusTotal / AbuseIPDB
 
 ### Installation
@@ -858,7 +810,7 @@ python -m venv venv
 venv\Scripts\activate          # Windows
 # source venv/bin/activate     # macOS / Linux
 
-pip install -e ".[dev,console]"
+pip install -e ".[dev]"
 ```
 
 ### Le mode le plus simple : sans aucune clé
@@ -871,24 +823,27 @@ set ENTRA_DATA_SOURCE=fixture
 set TI_DATA_SOURCE=fixture
 set MAIL_DATA_SOURCE=fixture
 
-python demo.py
+argus-agent                   # alerte de demonstration integree
 ```
 
-Vous verrez une investigation complète se dérouler.
+Vous verrez une investigation complète se dérouler, étape par étape.
 
-### Lancer la console
+### Vérifier chaque serveur séparément
+
+Chaque serveur porte son propre diagnostic, qui n'exige ni clé ni réseau :
 
 ```bash
-argus-console
+mitre-attack-mcp --check      # corpus ATT&CK embarqué
+detection-mcp --check         # indicateurs, Sigma, couverture
+vuln-intel-mcp --check        # CVE, KEV, EPSS
+web-recon-mcp --check         # TLS, DNS, en-têtes
+argus-mcp --check             # le serveur unique : domaines et outils exposés
 ```
-
-Puis ouvrez `http://127.0.0.1:8000`. Saisissez une alerte, regardez les étapes
-arriver une par une.
 
 ### Lancer les tests
 
 ```bash
-pytest              # 609 tests, aucun accès réseau
+pytest              # la suite complète, aucun accès réseau
 ruff check src tests
 mypy src            # vérification de types en mode strict
 argus-eval          # le harnais d'évaluation
@@ -926,19 +881,20 @@ d'accès, puis appelle chaque endpoint. Il distingue une permission oubliée d'u
 consentement administrateur non accordé — deux erreurs qui produisent le même
 `403`. **Aucun secret n'apparaît dans sa sortie.**
 
-### Docker
+### Construire l'extension distribuable
 
 ```bash
-docker build -t entra-secops-mcp .
-docker run -i --rm --env-file .env entra-secops-mcp
+python mcpb/outils/construire.py
 ```
 
-Construction multi-étapes, exécution en utilisateur non root (`uid=1000`),
-aucun secret dans les couches. La taille mesurée de l'image est indiquée dans le
-[README](../README.md#docker).
+Une commande produit `mcpb/dist/argus-secops-1.0.0.mcpb` : elle synchronise le
+code embarqué, génère le manifeste depuis le serveur lui-même, empaquette,
+**puis dépaquette l'archive ailleurs et l'exécute**.
 
-Rappel : `-i` garde l'entrée standard ouverte (c'est par là que passe MCP),
-**jamais `-t`**.
+Cette dernière étape n'est pas du zèle. Empaqueter réussit même quand le paquet
+est cassé : une version a été produite dont la commande de diagnostic plantait
+sur un `KeyError`. La CLI annonçait un succès, et le défaut n'apparaissait que
+chez le destinataire, sur la toute première commande qu'il lance.
 
 ### Brancher sur Claude Desktop
 
@@ -960,7 +916,7 @@ Redémarrez Claude Desktop, et posez une question en français.
 
 ---
 
-## 13 · Ce qui a été vérifié pour de vrai
+## 11 · Ce qui a été vérifié pour de vrai
 
 C'est la partie la plus honnête du projet, et probablement la plus utile en
 entretien.
@@ -1014,18 +970,38 @@ conçu pour échouer — qui les ont fait sortir.
   sur MCP. Le projet ne prétend pas à la nouveauté : il se positionne comme une
   **interface de télémétrie durcie**.
 - Trois outils restent bloqués faute de licence Entra ID P2.
-- La spécification MCP `2026-07-28` **déprécie formellement SSE** comme transport
-  MCP (la console, elle, utilise SSE côté navigateur, ce qui est un usage
-  différent et parfaitement valable).
+- La spécification MCP `2026-07-28` **déprécie formellement SSE** comme
+  transport MCP.
 
 ---
 
-## 14 · La carte des fichiers
+## 12 · La carte des fichiers
+
+### Deux zones, et une frontière vérifiée
+
+Le dépôt sépare ce qui est distribué de ce qui ne l'est pas :
+
+| | |
+|---|---|
+| `src/` | **le produit** — les 9 paquets recopiés dans l'extension `.mcpb` |
+| `atelier/` | **hors paquet** — l'agent de triage et le harnais d'évaluation |
+| `mcpb/` | tout ce qui concerne l'extension : manifeste, outillage, artefact |
+
+Pourquoi l'agent n'est pas distribué : quand un analyste installe l'extension,
+**c'est son modèle IA qui enchaîne les outils**. L'orchestrateur programmatique
+existe pour valider cette logique en dehors de tout modèle — il n'a rien à faire
+chez le destinataire.
+
+Une séparation qu'aucun test ne vérifie n'est qu'une convention de nommage.
+`tests/test_frontiere_paquet.py` la rend contraignante : un module de `src/` qui
+importerait `atelier/` passerait tous les tests ici, le paquet se construirait
+sans un mot, et il planterait à l'import **chez le destinataire** — sur une
+machine où `atelier/` n'existe pas.
 
 ```
 mcp-entra-secops/
 │
-├── src/
+├── src/                         ← LE PRODUIT : ce qui part dans le .mcpb
 │   ├── entra_secops_mcp/        ← Serveur 1 : identité (6 outils)
 │   │   ├── config.py               réglages, bornage des paramètres
 │   │   ├── graph.py                client Microsoft Graph + fixtures
@@ -1046,19 +1022,6 @@ mcp-entra-secops/
 │   │   ├── headers.py              ★ alignement (le piège Return-Path)
 │   │   └── posture.py              note sur 100
 │   │
-│   ├── argus_agent/             ← L'orchestrateur
-│   │   ├── playbooks.py            les 5 recettes, en données
-│   │   ├── orchestrator.py         exécution + comptabilité des coûts
-│   │   └── verdict.py              ★ la décision, en Python testé
-│   │
-│   ├── argus_eval/              ← Le harnais d'évaluation
-│   │   ├── runner.py               métriques et seuils bloquants
-│   │   └── cases/                  25 cas de référence
-│   │
-│   ├── argus_obs/               ← L'observabilité
-│   │   ├── models.py               coûts, dossiers, approbations
-│   │   └── store.py                anneau mémoire + journal ajout seul
-│   │
 │   ├── vuln_intel_mcp/          ← Serveur 4 : vulnérabilités (9 outils)
 │   │   ├── cvss.py                 ★ calcul CVSS, 100 % local
 │   │   ├── prioritize.py           ★ classement par paliers déterministes
@@ -1076,25 +1039,52 @@ mcp-entra-secops/
 │   │   ├── dnshygiene.py           ★ DNSSEC, CAA, alias pendants
 │   │   └── ct.py                   transparence des certificats
 │   │
+│   ├── detection_mcp/           ← Serveur 7 : détection (7 outils, hors ligne)
+│   │   ├── iocs.py                 ★ extraction, désamorçage, exclusions
+│   │   ├── sigma_rules.py          ★ qualité d'une règle, conversion
+│   │   ├── couverture.py           ★ étiquettes ATT&CK vivantes ou mortes
+│   │   └── models.py               formes de sortie
+│   │
 │   ├── argus_net/               ← Socle réseau partagé
 │   │   ├── http.py                 client avec réessai
 │   │   ├── feeds.py                cache des gros catalogues
 │   │   └── ratelimit.py            seau à jetons
 │   │
-│   └── argus_console/           ← La console analyste
-│       ├── app.py                  API FastAPI + flux SSE
-│       └── static/index.html       l'interface
+│   └── argus_bundle/            ← Le serveur unique, pour la distribution
+│       └── server.py               réunit les 7 domaines en un processus
+│
+├── mcpb/                        ← TOUT le paquet distribuable
+│   ├── manifest.json               généré, jamais écrit à la main
+│   ├── icon.png                    générée, pas déposée en binaire opaque
+│   ├── pyproject.toml              dépendances installées par uv
+│   ├── server/main.py              point d'entrée lancé par uv
+│   ├── outils/
+│   │   ├── construire.py        ★ construit ET vérifie le .mcpb
+│   │   ├── synchroniser_mcpb.py    empêche l'écart code testé / code livré
+│   │   ├── generer_manifeste.py    interroge le serveur lui-même
+│   │   └── generer_icone.py        l'icône, reproductible
+│   ├── src/                        copie du code (non versionnée)
+│   └── dist/                       l'artefact .mcpb (non versionné)
+│
+├── atelier/                     ← HORS PAQUET : jamais distribué
+│   ├── argus_agent/                l'orchestrateur programmatique
+│   │   ├── playbooks.py            les 5 recettes, en données
+│   │   ├── orchestrator.py         exécution + comptabilité des coûts
+│   │   └── verdict.py           ★ la décision, en Python testé
+│   └── argus_eval/                 le harnais d'évaluation
+│       ├── runner.py               métriques et seuils bloquants
+│       └── cases/                  25 cas de référence
 │
 ├── scripts/
 │   └── distiller_attack.py      ← régénère le corpus ATT&CK embarqué
-├── tests/                       ← 609 tests
+├── tests/
+│   └── test_frontiere_paquet.py ★ interdit à src/ d'importer atelier/
 ├── docs/
-│   ├── SETUP.md                    installation pas à pas
+│   ├── INSTALLER.md                installer, distribuer, exposer l'extension
+│   ├── SETUP.md                    travailler sur le code
 │   ├── RESEARCH.md                 scan du marché, exposition sécurisée
 │   └── COMPRENDRE.md               ← ce document
-├── demo.py                      ← investigation de démonstration
-├── Dockerfile
-└── .github/workflows/ci.yml     ← lint, types, tests, évaluation, Trivy
+└── .github/workflows/ci.yml     ← lint, types, tests, évaluation, paquet, Trivy
 ```
 
 Les fichiers marqués ★ sont ceux où se concentre la valeur réelle du projet. Si

@@ -1,7 +1,7 @@
 [project]
 name = "argus-mcpb"
 version = "1.0.0"
-description = "ARGUS — plateforme SecOps, 39 outils MCP en lecture seule"
+description = "ARGUS — plateforme SecOps, 46 outils MCP en lecture seule"
 requires-python = ">=3.11"
 dependencies = [
     "mcp>=2.0",
@@ -12,6 +12,14 @@ dependencies = [
     "cryptography>=42.0",
     "azure-identity>=1.19",
     "aiohttp>=3.10",
+    # Analyse et conversion des regles Sigma. L'API a change entre pySigma
+    # 0.x et 1.x : le plancher est la version contre laquelle le code est
+    # verifie, pas la plus ancienne qui s'installe.
+    "pysigma>=1.5",
+    "pysigma-backend-kusto>=1.0",
+    "pysigma-backend-splunk>=2.1",
+    "pysigma-backend-elasticsearch>=2.1",
+    "PyYAML>=6.0",
 ]
 
 [build-system]
@@ -24,6 +32,7 @@ packages = [
     "src/argus_net",
     "src/vuln_intel_mcp",
     "src/mitre_mcp",
+    "src/detection_mcp",
     "src/web_recon_mcp",
     "src/email_security_mcp",
     "src/threat_intel_mcp",

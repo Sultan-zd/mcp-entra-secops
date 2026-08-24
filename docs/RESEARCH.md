@@ -153,14 +153,32 @@ Aucun port entrant n'est ouvert : le conteneur établit une connexion sortante.
 Streamable HTTP + OAuth 2.1 derrière proxy inverse que lorsque le besoin de
 partage se matérialisera. **Ne pas exposer de port avant d'en avoir besoin.**
 
+> **État au 24 août 2026.** Streamable HTTP est implémenté (`argus-mcp --http`)
+> en respectant cette recommandation : **stdio reste le défaut**, l'écoute est
+> sur `127.0.0.1`, et le serveur refuse de démarrer sur une autre interface
+> sans jeton **ni chiffrement**.
+>
+> Le Modèle 1 est pris en charge par `--tls-en-amont`, qui déclare qu'un proxy
+> inverse termine TLS. Faute de proxy disponible, `--tls-cert / --tls-key`
+> termine TLS dans le serveur lui-même : le couple est validé avant l'ouverture
+> du port — expiration, correspondance clé/certificat, présence de SAN — et la
+> version minimale est fixée à TLS 1.2, vérifiée par un handshake réel.
+>
+> **Ce qui manque encore** pour un Modèle 1 complet : l'authentification est un
+> secret partagé, pas un jeton d'IdP. La forme est celle d'un serveur de
+> ressource (`WWW-Authenticate` conforme RFC 9728), de sorte que la migration
+> ne touchera que le vérificateur. Le renouvellement automatique des
+> certificats (ACME) reste du ressort du proxy — c'est la raison principale de
+> le préférer en production.
+
 ## B.4 Menaces spécifiques et contre-mesures
 
 | Menace | Mécanisme | Contre-mesure |
 |---|---|---|
 | **Injection de prompt via la télémétrie** | Un attaquant nomme son appareil « Ignore les instructions précédentes ». Le texte arrive dans le contexte du modèle. | **Liste blanche de champs** : la troncature est un contrôle de sécurité, pas seulement une optimisation. Les champs libres non listés n'atteignent jamais le modèle. *Implémenté.* |
 | **Injection de filtre OData** | Une valeur contenant une apostrophe altère la requête `$filter`. | Échappement systématique. *Implémenté et testé.* |
-| **Rebinding DNS** | Un site web malveillant atteint un serveur MCP local. | Écoute sur `127.0.0.1` uniquement, validation de l'en-tête `Origin`. *À implémenter avec le transport HTTP.* |
-| **Député confus** *(confused deputy)* | Un jeton émis pour un autre service est accepté. | Validation de l'audience **et** de l'émetteur (RFC 9207). *À implémenter avec OAuth.* |
+| **Rebinding DNS** | Un site web malveillant atteint un serveur MCP local. | Écoute sur `127.0.0.1` par défaut, validation de l'en-tête `Origin`, jamais désactivable. **Refus de démarrer** sur une autre interface sans jeton. *Implémenté et vérifié par requêtes réelles — une origine étrangère reçoit `403`.* |
+| **Député confus** *(confused deputy)* | Un jeton émis pour un autre service est accepté. | Validation de l'audience **et** de l'émetteur (RFC 9207). *Non implémenté : le jeton actuel est un secret partagé, pas un jeton d'IdP. La forme de serveur de ressource est en place — le `401` porte un `WWW-Authenticate` conforme RFC 9728 — de sorte que la migration remplacera le seul vérificateur.* |
 | **Exfiltration par l'agent** | Un agent compromis vide les journaux du tenant. | Bornes dures côté serveur : maximum 100 résultats, 168 heures, 20 pages. *Implémenté.* |
 | **Fuite de secret** | Un `AZURE_CLIENT_SECRET` committé ou inscrit dans une image. | `.gitignore`, `--env-file`, gitleaks en CI et en pre-commit. *Implémenté.* |
 | **Élévation de privilèges** | Le serveur détient plus de droits que nécessaire. | Cinq permissions applicatives ciblées, lecture seule. **Cible Phase 2 : identité managée**, qui supprime le secret client. |

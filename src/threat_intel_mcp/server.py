@@ -5,6 +5,8 @@ from __future__ import annotations
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
+from argus_net import VERSION
+
 from .runtime import lifespan
 from .tools import bulk_enrich, enrich_domain, enrich_file_hash, enrich_ip
 
@@ -52,7 +54,7 @@ def build_server() -> MCPServer:
     server: MCPServer = MCPServer(
         name="ThreatIntel",
         title="Renseignement sur les menaces",
-        version="0.2.0",
+        version=VERSION,
         instructions=INSTRUCTIONS,
         lifespan=lifespan,
     )

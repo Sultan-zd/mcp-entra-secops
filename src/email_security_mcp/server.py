@@ -5,6 +5,8 @@ from __future__ import annotations
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
+from argus_net import VERSION
+
 from .runtime import lifespan
 from .tools import (
     analyze_email_headers,
@@ -67,7 +69,7 @@ def build_server() -> MCPServer:
     server: MCPServer = MCPServer(
         name="EmailSecurity",
         title="Sécurité de la messagerie",
-        version="0.3.0",
+        version=VERSION,
         instructions=INSTRUCTIONS,
         lifespan=lifespan,
     )

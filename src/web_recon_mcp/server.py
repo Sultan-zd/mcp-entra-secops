@@ -5,6 +5,8 @@ from __future__ import annotations
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
+from argus_net import VERSION
+
 from .runtime import lifespan
 from .tools import (
     check_certificate_expiry,
@@ -80,7 +82,7 @@ def build_server() -> MCPServer:
     server: MCPServer = MCPServer(
         name="WebRecon",
         title="Reconnaissance web et TLS",
-        version="0.1.0",
+        version=VERSION,
         instructions=INSTRUCTIONS,
         lifespan=lifespan,
     )

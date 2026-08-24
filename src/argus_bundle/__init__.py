@@ -1,6 +1,6 @@
 """ARGUS en un seul serveur, pour la distribution.
 
-Les six serveurs restent la bonne architecture sur un poste d'analyste. Ce
+Les sept serveurs restent la bonne architecture sur un poste d'analyste. Ce
 paquet les réunit sans les réécrire, pour qu'une équipe n'ait qu'un fichier à
 installer au lieu de six déclarations à recopier.
 """

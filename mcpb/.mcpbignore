@@ -4,3 +4,19 @@ __pycache__/
 .venv/
 .uv/
 uv.lock
+
+# Les outils de construction vivent a cote du paquet, mais n'en font pas
+# partie : les embarquer livrerait au destinataire des scripts qui recopient
+# des chemins inexistants chez lui.
+outils/
+
+# L'artefact produit. Sans cette ligne, chaque construction empaquetterait la
+# precedente : le paquet doublerait de taille a chaque passage.
+dist/
+
+# La cle privee de signature. Sans cette ligne, elle part CHEZ LE DESTINATAIRE,
+# qui peut alors signer des versions falsifiees sous la meme identite. Le
+# defaut a ete constate : deux fichiers .pem se sont retrouves dans un paquet.
+signature/
+*.pem
+*.key

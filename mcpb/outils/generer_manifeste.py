@@ -10,12 +10,12 @@ import os
 import sys
 from pathlib import Path
 
-RACINE = Path(__file__).resolve().parent.parent
-MCPB = RACINE / "mcpb"
+MCPB = Path(__file__).resolve().parent.parent
+RACINE = MCPB.parent
 
 sys.path.insert(0, str(MCPB / "src"))
 
-# Toutes les cles presentes : le manifeste doit annoncer les 39 outils, pas
+# Toutes les cles presentes : le manifeste doit annoncer TOUS les outils, pas
 # seulement ceux disponibles sur cette machine.
 os.environ.update(
     {
@@ -26,8 +26,18 @@ os.environ.update(
 )
 
 from argus_bundle.server import build_server  # noqa: E402
+from argus_net import VERSION  # noqa: E402
 
 outils = asyncio.run(build_server().list_tools())
+TOTAL = len(outils)
+
+# Les outils reellement disponibles sans aucune cle : le serveur est reconstruit
+# avec un environnement vierge plutot que de se fier a un chiffre ecrit a la
+# main, qui devient faux des qu'un serveur est ajoute.
+for _cle in ("VIRUSTOTAL_API_KEY", "ABUSEIPDB_API_KEY", "ENTRA_DATA_SOURCE"):
+    os.environ.pop(_cle, None)
+SANS_CLE = len(asyncio.run(build_server().list_tools()))
+AVEC_CLE = TOTAL - SANS_CLE
 
 
 def resumer(description: str | None) -> str:
@@ -44,21 +54,27 @@ manifeste = {
     "manifest_version": "0.4",
     "name": "argus-secops",
     "display_name": "ARGUS — Plateforme SecOps",
-    "version": "1.0.0",
+    "version": VERSION,
+    # Affichee dans la liste des extensions de l'hote. Regeneree par
+    # mcpb/outils/generer_icone.py plutot que deposee en binaire opaque.
+    "icon": "icon.png",
     "description": (
-        "39 outils SecOps en lecture seule : CVE/KEV/EPSS, MITRE ATT&CK hors "
-        "ligne, TLS, DNS, SPF/DKIM/DMARC, reputation d'indicateurs, Entra ID."
+        f"{TOTAL} outils SecOps en lecture seule : CVE/KEV/EPSS, MITRE ATT&CK hors "
+        "ligne, regles Sigma et indicateurs, TLS, DNS, SPF/DKIM/DMARC, "
+        "reputation d'indicateurs, Entra ID."
     ),
     "long_description": (
         "ARGUS expose la telemetrie de securite comme outils executables par un "
-        "agent. Vingt-neuf outils fonctionnent SANS AUCUNE CLE d'API : "
+        f"agent. {SANS_CLE} outils fonctionnent SANS AUCUNE CLE d'API : "
         "vulnerabilites (NVD, catalogue CISA des failles activement exploitees, "
         "probabilite d'exploitation EPSS), MITRE ATT&CK avec son corpus embarque "
-        "— donc utilisable hors ligne —, inspection TLS par connexion directe, "
+        "— donc utilisable hors ligne —, ingenierie de detection (extraction "
+        "d'indicateurs, analyse et conversion de regles Sigma, couverture "
+        "ATT&CK) egalement hors ligne, inspection TLS par connexion directe, "
         "hygiene DNS (DNSSEC, CAA, alias pendants), en-tetes de securite, "
         "transparence des certificats, et posture de messagerie SPF/DKIM/DMARC. "
-        "Dix outils supplementaires s'activent si vous fournissez vos propres "
-        "cles VirusTotal, AbuseIPDB ou un tenant Microsoft Entra.\n\n"
+        f"{AVEC_CLE} outils supplementaires s'activent si vous fournissez vos "
+        "propres cles VirusTotal, AbuseIPDB ou un tenant Microsoft Entra.\n\n"
         "Ce n'est pas un relais d'API. Les notes CVSS sont RECALCULEES "
         "localement a partir du vecteur et confrontees a 138 vecteurs reels du "
         "NVD ; le classement des vulnerabilites est deterministe et par paliers ; "
@@ -121,7 +137,7 @@ manifeste = {
             "title": "Cle VirusTotal (facultatif)",
             "description": (
                 "Active les outils de reputation d'indicateurs. Le palier "
-                "gratuit suffit. Sans cle, les 29 autres outils fonctionnent."
+                f"gratuit suffit. Sans cle, les {SANS_CLE} autres outils fonctionnent."
             ),
             "sensitive": True,
             "required": False,

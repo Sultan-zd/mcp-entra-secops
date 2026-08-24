@@ -1,3 +1,5 @@
 """Serveur MCP exposant les journaux de sécurité Microsoft Entra ID."""
 
-__version__ = "0.1.0"
+from argus_net import VERSION
+
+__version__ = VERSION

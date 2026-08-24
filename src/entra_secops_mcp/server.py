@@ -5,6 +5,8 @@ from __future__ import annotations
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
+from argus_net import VERSION
+
 from .runtime import lifespan
 from .tools.access import get_conditional_access_policies, get_user_context
 from .tools.audits import get_directory_audits
@@ -60,7 +62,7 @@ def build_server() -> MCPServer:
     server: MCPServer = MCPServer(
         name="EntraSecOps",
         title="Entra ID SecOps",
-        version="0.1.0",
+        version=VERSION,
         instructions=INSTRUCTIONS,
         lifespan=lifespan,
     )

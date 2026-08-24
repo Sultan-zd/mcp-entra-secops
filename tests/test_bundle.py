@@ -147,7 +147,7 @@ def test_le_mode_demonstration_active_l_identite_sans_secret(
 # --------------------------------------------------------------------------
 # Composition du serveur
 # --------------------------------------------------------------------------
-async def test_le_serveur_expose_29_outils_sans_aucune_cle(
+async def test_le_serveur_expose_36_outils_sans_aucune_cle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """C'est la promesse faite dans le manifeste du paquet."""
@@ -165,18 +165,20 @@ async def test_le_serveur_expose_29_outils_sans_aucune_cle(
 
     outils = await build_server().list_tools()
 
-    assert len(outils) == 29
+    assert len(outils) == 36
     noms = {t.name for t in outils}
     assert "prioritize_cves" in noms
     assert "map_findings_to_attack" in noms
     assert "check_web_exposure" in noms
+    assert "analyze_sigma_rule" in noms
+    assert "extract_iocs" in noms
     # Aucun outil exigeant une clé ne doit apparaître : un outil visible qui
     # répond toujours « clé absente » gaspille le contexte du modèle.
     assert "enrich_ip" not in noms
     assert "get_user_signins" not in noms
 
 
-async def test_toutes_les_cles_exposent_39_outils(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_toutes_les_cles_exposent_46_outils(monkeypatch: pytest.MonkeyPatch) -> None:
     from argus_bundle.server import build_server
 
     monkeypatch.setenv("VIRUSTOTAL_API_KEY", "cle")
@@ -185,14 +187,14 @@ async def test_toutes_les_cles_exposent_39_outils(monkeypatch: pytest.MonkeyPatc
 
     outils = await build_server().list_tools()
 
-    assert len(outils) == 39
+    assert len(outils) == 46
     noms = {t.name for t in outils}
     assert "enrich_ip" in noms
     assert "get_user_signins" in noms
 
 
 async def test_aucun_nom_d_outil_n_est_en_double(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Six serveurs réunis : une collision de noms rendrait un outil inatteignable."""
+    """Sept serveurs réunis : une collision de noms rendrait un outil inatteignable."""
     from argus_bundle.server import build_server
 
     monkeypatch.setenv("VIRUSTOTAL_API_KEY", "cle")
@@ -201,3 +203,23 @@ async def test_aucun_nom_d_outil_n_est_en_double(monkeypatch: pytest.MonkeyPatch
     noms = [t.name for t in await build_server().list_tools()]
 
     assert len(noms) == len(set(noms))
+
+
+def test_chaque_domaine_a_un_libelle_dans_le_diagnostic() -> None:
+    """Le défaut trouvé en exécutant le paquet, pas en relisant le code.
+
+    Ajouter un septième domaine sans l'ajouter au tableau des libellés faisait
+    planter `--check` sur un `KeyError`. Le serveur, lui, démarrait — si bien
+    que le défaut ne se voyait qu'à l'exécution du paquet distribué, chez le
+    destinataire, sur la commande même qu'il lance en premier pour vérifier son
+    installation.
+    """
+    import inspect
+
+    from argus_bundle.__main__ import _run_check
+
+    source = inspect.getsource(_run_check)
+    for domaine in domaines_actifs():
+        assert f'"{domaine}":' in source, (
+            f"le domaine « {domaine} » n'a pas de libellé dans --check"
+        )

@@ -1,21 +1,29 @@
-# Guide d'installation et de test
+# Travailler sur le code d'ARGUS
 
-ARGUS est composé de **six serveurs MCP**. Trois d'entre eux ne demandent
-**aucune clé d'API** : vous pouvez les essayer dans la minute qui suit
-l'installation.
+> **Vous voulez seulement *utiliser* ARGUS ?** Ce document n'est pas le bon.
+> L'extension `.mcpb` s'installe d'un double-clic, sans cloner quoi que ce
+> soit : voir **[`INSTALLER.md`](INSTALLER.md)**.
+>
+> Ce guide-ci s'adresse à qui modifie le code, lance les tests, ou construit
+> l'extension.
+
+Le contenu de l'extension, ce sont **sept serveurs MCP**. Cinq d'entre eux ne
+demandent **aucune clé d'API** : vous pouvez les essayer dans la minute qui suit
+l'installation du dépôt.
 
 Ce document va du plus simple au plus complet :
 
-1. **Installation** — 2 minutes
+1. **Installation du dépôt** — 2 minutes
 2. **Essayer les serveurs sans clé** — immédiat, rien à configurer
 3. **Lancer la suite de tests** — la preuve que tout fonctionne
-4. **Test dans Claude Desktop** — le vrai usage, en langage naturel
-5. **Exécution en conteneur Docker** — le mode de livraison
+4. **Brancher le code en cours sur Claude Desktop** — tester ce qu'on modifie
+5. **Construire l'extension `.mcpb`** — le livrable
 6. **Connexion à un vrai tenant Entra ID** — pour les six outils d'identité
 
 | Serveur | Clé nécessaire ? | Réseau nécessaire ? |
 |---|---|---|
 | `mitre-attack-mcp` | Aucune | **Non** — corpus embarqué |
+| `detection-mcp` | Aucune | **Non** — analyse purement locale |
 | `vuln-intel-mcp` | Aucune | Oui — NVD, CISA, EPSS |
 | `web-recon-mcp` | Aucune | Oui — vers la cible analysée |
 | `email-security-mcp` | Aucune | Oui — DNS public |
@@ -161,7 +169,7 @@ teknologiia.com   note A (100/100)  SPF 1/10 lookups · DKIM 2 clés · DMARC re
 pytest
 ```
 
-Résultat attendu : **609 tests**, tous verts, **sans aucun accès réseau ni clé
+Résultat attendu : **661 tests**, tous verts, **sans aucun accès réseau ni clé
 d'API**. Les sources publiques sont simulées ; un test qui dépendrait de la
 disponibilité du NVD finirait par être ignoré.
 
@@ -204,16 +212,17 @@ son entrée standard, pas avec un humain. Arrêtez-le avec `Ctrl+C`.
 
 Pour voir une vraie sortie, utilisez le script de démonstration.
 
-### Script de démonstration
+### Appeler les outils depuis du Python
 
-Le fichier `demo.py` est déjà à la racine du projet :
+Pour une investigation complète, enchaînée automatiquement :
 
 ```bash
-python demo.py
+argus-agent                   # alerte de demonstration integree
 ```
 
-Il rejoue une investigation complète sur des données de démonstration. Voici
-son contenu, pour comprendre comment appeler les outils depuis du Python :
+Pour comprendre comment appeler un outil directement, copiez ce script dans un
+fichier et lancez-le. Il fonctionne sans tenant tant que
+`ENTRA_DATA_SOURCE=fixture` :
 
 ```python
 import asyncio
@@ -259,10 +268,14 @@ IP observées : ['185.220.101.47', '77.42.130.18']
 
 ---
 
-## 4. Test dans Claude Desktop
+## 4. Brancher le code en cours sur Claude Desktop
 
 C'est le test qui compte : celui où l'on pose une question en français et où
 l'IA va chercher la réponse elle-même.
+
+On vise ici le **code du dépôt**, pas l'extension : c'est ce qui permet de
+tester une modification sans reconstruire le `.mcpb` à chaque fois. Pour
+installer l'extension elle-même, voir [`INSTALLER.md`](INSTALLER.md).
 
 ### Étape 1 — trouver le fichier de configuration
 
@@ -412,51 +425,42 @@ configuration : `mcp-server-argus-menaces.log`, `mcp-server-entra-secops.log`…
 
 ---
 
-## 5. Exécution en conteneur Docker
+## 5. Construire l'extension `.mcpb`
 
-### Prérequis
-
-Docker Desktop doit être **démarré** (l'icône baleine dans la zone de
-notification doit être stable, pas animée).
-
-### Construire l'image
+C'est le livrable du projet. Une commande le construit **et le vérifie** :
 
 ```bash
-docker build -t entra-secops-mcp .
+npm install @anthropic-ai/mcpb      # une seule fois
+python mcpb/outils/construire.py
 ```
 
-### Vérifier qu'elle fonctionne
+```
+1 · Synchroniser le code embarqué
+  ✓ mcpb/src est identique à src/
+2 · Générer le manifeste
+  ✓ 46 outils déclarés par le serveur lui-même
+3 · Empaqueter
+  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (678 Ko)
+4 · Vérifier l'artefact
+  ✓ exécuté depuis une copie dépaquetée — 36 outils exposés.
+  ✓ 113 fichiers, aucun artefact de construction embarqué
+```
+
+La quatrième étape est celle qui compte : empaqueter réussit même quand le
+paquet est cassé. Une version a été produite dont la commande de diagnostic
+plantait sur un `KeyError` — la CLI annonçait un succès, et le défaut
+n'apparaissait que chez le destinataire.
+
+Avant de toucher au code embarqué, ou pour contrôler un écart sans rien
+reconstruire :
 
 ```bash
-docker run -i --rm -e ENTRA_DATA_SOURCE=fixture entra-secops-mcp
+python mcpb/outils/construire.py --verifier-seulement
 ```
 
-Le conteneur démarre et attend, comme en local. `Ctrl+C` pour l'arrêter.
-
-> **Pourquoi `-i` sans `-t` ?**
-> `-i` garde l'entrée standard ouverte : c'est par là que passe le protocole
-> MCP. `-t` allouerait un pseudo-terminal, qui injecte des codes de couleur
-> dans la sortie et **corrompt les trames JSON**. C'est une exigence explicite
-> du cahier des charges.
-
-### Brancher le conteneur sur Claude Desktop
-
-```json
-{
-  "mcpServers": {
-    "entra-secops": {
-      "command": "docker",
-      "args": [
-        "run", "-i", "--rm",
-        "--env-file", "C:\\chemin\\absolu\\vers\\mcp-entra-secops\\.env",
-        "entra-secops-mcp"
-      ]
-    }
-  }
-}
-```
-
----
+> **Installer l'extension, la distribuer, l'exposer en HTTP pour une équipe :**
+> voir [`INSTALLER.md`](INSTALLER.md). Ce document-ci s'arrête à la
+> construction.
 
 ## 6. Connexion à un vrai tenant Entra ID
 
@@ -554,7 +558,7 @@ Aucun secret n'apparaît dans la sortie : elle peut être collée dans un ticket
 Une fois le diagnostic vert :
 
 ```bash
-python demo.py
+argus-agent                   # alerte de demonstration integree
 ```
 
 ---
@@ -564,9 +568,9 @@ python demo.py
 - **`.env` ne doit jamais être committé.** Il est exclu par `.gitignore`.
 - **Un secret poussé sur Git doit être révoqué** dans le portail Azure, pas
   seulement supprimé du fichier : l'historique Git le conserve.
-- **Aucun secret n'est inscrit dans l'image Docker.** Les variables `ENV` d'un
-  Dockerfile restent lisibles dans les couches de l'image, même après
-  suppression. C'est pourquoi les identifiants passent par `--env-file` au
-  démarrage.
+- **Aucun secret n'est inscrit dans l'extension distribuée.** Le `.mcpb` ne
+  contient que du code : les clés sont saisies par le destinataire à
+  l'installation, et l'hôte les transmet au serveur par variables
+  d'environnement. Un fichier `.mcpb` peut donc être partagé sans risque.
 - **Tous les outils sont en lecture seule.** Le serveur ne peut ni désactiver
   un compte, ni révoquer une session, ni modifier une politique.

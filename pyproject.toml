@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "argus-secops"
-version = "0.6.0"
+version = "1.0.0"
 description = "Plateforme SecOps agentique : serveurs MCP d'identité, de renseignement sur les menaces et de sécurité de la messagerie"
 readme = "README.md"
 requires-python = ">=3.11"
@@ -27,6 +27,19 @@ dependencies = [
     # quand la verification est desactivee, ce qui est precisement le mode
     # ou l'on veut inspecter un certificat expire ou auto-signe.
     "cryptography>=42.0",
+    # Analyse et conversion des regles Sigma. La specification comporte des
+    # dizaines de modificateurs : une reimplementation maison produirait des
+    # regles qui paraissent correctes et ratent silencieusement les attaques.
+    # L'API a change entre pySigma 0.x et 1.x : le plancher est la version
+    # contre laquelle le code est verifie, pas la plus ancienne qui s'installe.
+    "pysigma>=1.5",
+    "pysigma-backend-kusto>=1.0",
+    "pysigma-backend-splunk>=2.1",
+    "pysigma-backend-elasticsearch>=2.1",
+    # Lecture de la structure brute d'une regle. Arrive avec pysigma, mais ce
+    # module l'importe directement : une dependance transitive peut disparaitre
+    # sans preavis.
+    "PyYAML>=6.0",
 ]
 
 [project.optional-dependencies]
@@ -34,9 +47,6 @@ dependencies = [
 # cache en memoire : suffisant pour un poste de travail, insuffisant des que
 # plusieurs instances tournent en parallele.
 cache = ["redis>=5.0"]
-# Console analyste. Optionnelle : les serveurs MCP et l'agent fonctionnent
-# sans elle, et la CI n'a pas besoin d'un serveur web pour valider le reste.
-console = ["fastapi>=0.115", "uvicorn>=0.32"]
 dev = [
     "pytest>=8.3",
     "pytest-asyncio>=0.24",
@@ -51,33 +61,40 @@ threat-intel-mcp = "threat_intel_mcp.__main__:main"
 email-security-mcp = "email_security_mcp.__main__:main"
 vuln-intel-mcp = "vuln_intel_mcp.__main__:main"
 mitre-attack-mcp = "mitre_mcp.__main__:main"
+detection-mcp = "detection_mcp.__main__:main"
 web-recon-mcp = "web_recon_mcp.__main__:main"
 argus-mcp = "argus_bundle.__main__:main"
 argus-agent = "argus_agent.__main__:main"
 argus-eval = "argus_eval.__main__:main"
-argus-console = "argus_console.__main__:main"
 
 [tool.hatch.build.targets.wheel]
 packages = [
+    # --- src/ : LE PRODUIT ----------------------------------------------
+    # Ces neuf paquets, et eux seuls, partent dans l'extension .mcpb. La
+    # liste est doublee dans mcpb/outils/synchroniser_mcpb.py, qui fait foi
+    # pour la construction ; un test verifie qu'elles ne divergent pas.
     "src/entra_secops_mcp",
     "src/threat_intel_mcp",
     "src/email_security_mcp",
-    "src/argus_agent",
-    "src/argus_eval",
-    "src/argus_obs",
-    "src/argus_console",
     "src/argus_net",
     "src/vuln_intel_mcp",
     "src/mitre_mcp",
+    "src/detection_mcp",
     "src/web_recon_mcp",
     "src/argus_bundle",
+    # --- atelier/ : HORS PAQUET ------------------------------------------
+    # Outillage de developpement et de validation. Jamais distribue : quand
+    # un analyste installe l'extension, c'est SON modele qui enchaine les
+    # outils, l'orchestrateur programmatique ne lui sert a rien.
+    "atelier/argus_agent",
+    "atelier/argus_eval",
 ]
 
 # ---------------------------------------------------------------------------
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["src", "tests"]
+src = ["src", "atelier", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "N", "UP", "B", "SIM", "RUF", "ASYNC", "S"]
@@ -85,6 +102,10 @@ ignore = ["S101"]  # assert autorisé dans les tests
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S105", "S106"]
+# L'outillage de construction lance des commandes ecrites en dur dans le
+# fichier lui-meme, jamais une entree utilisateur.
+"mcpb/outils/*" = ["S603"]
+"scripts/*" = ["S603"]
 
 # ---------------------------------------------------------------------------
 [tool.mypy]
@@ -95,7 +116,7 @@ disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["mcp.*", "azure.*", "redis.*", "dns.*", "fastapi.*", "uvicorn.*"]
+module = ["mcp.*", "azure.*", "redis.*", "dns.*", "sigma.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------

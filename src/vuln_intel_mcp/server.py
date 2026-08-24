@@ -5,6 +5,8 @@ from __future__ import annotations
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
+from argus_net import VERSION
+
 from .runtime import lifespan
 from .tools import (
     bulk_lookup_cve,
@@ -89,7 +91,7 @@ def build_server() -> MCPServer:
     server: MCPServer = MCPServer(
         name="VulnIntel",
         title="Renseignement sur les vulnérabilités",
-        version="0.1.0",
+        version=VERSION,
         instructions=INSTRUCTIONS,
         lifespan=lifespan,
     )

@@ -44,9 +44,14 @@ data/
 rapport-evaluation.json
 
 # ---- Paquet MCPB ----------------------------------------------------------
-# L'artefact se reconstruit avec `mcpb pack mcpb <nom>.mcpb` ; le versionner
-# ajouterait 636 Ko de binaire a chaque changement de code.
+# Tout ce qui concerne le paquet distribuable vit dans mcpb/. Ce qui suit est
+# REGENERE par `python mcpb/outils/construire.py` : le versionner ajouterait
+# 660 Ko de binaire et une copie du code a chaque changement.
 *.mcpb
+mcpb/dist/
+# Cle privee de signature du paquet. La versionner permettrait a quiconque
+# lit le depot de signer une version modifiee sous la meme identite.
+mcpb/signature/
 mcpb/src/
 mcpb/.venv/
 mcpb/uv.lock

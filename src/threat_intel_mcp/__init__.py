@@ -1,3 +1,5 @@
 """Serveur MCP de renseignement sur les menaces pour la plateforme ARGUS."""
 
-__version__ = "0.2.0"
+from argus_net import VERSION
+
+__version__ = VERSION

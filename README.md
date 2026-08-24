@@ -5,9 +5,15 @@
 ![MCP](https://img.shields.io/badge/MCP-2026--07--28-brightgreen)
 ![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)
 
-Serveurs [MCP](https://modelcontextprotocol.io) exposant la télémétrie de sécurité
-comme outils exécutables par un agent IA (Claude Desktop, Cursor, ou tout autre
-client MCP).
+**Une extension `.mcpb` à installer d'un double-clic**, qui donne à votre
+modèle IA 46 outils de sécurité en lecture seule. Un analyste pose sa question
+en français ; le modèle choisit les outils et rend une réponse fondée sur des
+données réelles.
+
+Bâtie sur [MCP](https://modelcontextprotocol.io) — donc utilisable dans Claude
+Desktop, Cursor, ou tout autre client compatible.
+
+**[→ Installation](#installation)**
 
 | Serveur | Domaine | Outils |
 |---|---|---|
@@ -16,31 +22,190 @@ client MCP).
 | `email-security-mcp` | Messagerie — SPF, DKIM, DMARC, en-têtes | 5 |
 | `vuln-intel-mcp` | **Vulnérabilités** — NVD, CISA KEV, EPSS · *sans clé* | 9 |
 | `mitre-attack-mcp` | **MITRE ATT&CK** — corpus embarqué · *hors ligne* | 9 |
+| `detection-mcp` | **Détection** — indicateurs, Sigma, couverture · *hors ligne* | 7 |
 | `web-recon-mcp` | **Web & TLS** — connexion directe, DNS, transparence · *sans clé* | 6 |
 | `argus-agent` | **Orchestration** — enchaîne les domaines | — |
 | `argus-eval` | **Évaluation** — 25 incidents de référence, seuils bloquants | — |
-| `argus-console` | **Console analyste** — investigation en direct, porte d'approbation | — |
 
-**39 outils.** Vingt-quatre d'entre eux ne demandent **aucune clé d'API** : NVD,
-le catalogue CISA et EPSS sont publics, le corpus ATT&CK est embarqué, et
-l'inspection TLS ouvre sa propre connexion.
+**46 outils.** Trente-six ne demandent **aucune clé d'API** : NVD, le catalogue
+CISA et EPSS sont publics, le corpus ATT&CK est embarqué, l'analyse des règles
+Sigma est purement locale, et l'inspection TLS ouvre sa propre connexion.
 
-Douze fonctionnent même **sans accès Internet** — les neuf outils MITRE parce
-que le corpus est local, et l'inspection TLS, DNS et en-têtes parce qu'elles
-visent l'hôte directement, y compris un hôte **interne** qu'aucun service en
-ligne ne pourrait atteindre.
+**Dix-sept ne touchent pas au réseau du tout** — les neuf outils MITRE et les
+sept outils de détection, parce que le corpus et l'analyse sont locaux, plus le
+calcul CVSS. Un rapport de menace confidentiel ou une règle en cours d'écriture
+ne quittent jamais le poste.
+
+L'inspection TLS, DNS et en-têtes vise l'hôte **directement** plutôt que de
+passer par un service tiers : elle fonctionne donc aussi sur un hôte **interne**
+qu'aucun service en ligne ne pourrait atteindre.
 
 Objectif : permettre à un analyste de poser une question en langage naturel
 — *« pourquoi ce compte n'arrive-t-il plus à se connecter ? »* — et d'obtenir en
 quelques secondes une réponse fondée sur les données réelles du tenant.
 
-> 🎓 **[Comprendre ARGUS de A à Z](docs/COMPRENDRE.md)** — tout le projet
-> expliqué depuis zéro, sans prérequis. **Commencez par là.**
-> 📖 **[Guide d'installation et de test](docs/SETUP.md)** — les trois façons de
-> lancer le serveur, pas à pas.
-> 🔍 **[Brief technique](docs/RESEARCH.md)** — scan du marché et exposition sécurisée.
+| Document | Pour qui |
+|---|---|
+| 📦 **[INSTALLER.md](docs/INSTALLER.md)** | l'analyste qui reçoit l'extension, et qui la distribue |
+| 🎓 **[COMPRENDRE.md](docs/COMPRENDRE.md)** | tout le projet expliqué depuis zéro, sans prérequis |
+| 🔧 **[SETUP.md](docs/SETUP.md)** | qui modifie le code, lance les tests, construit l'extension |
+| 🔍 **[RESEARCH.md](docs/RESEARCH.md)** | scan du marché et choix d'exposition sécurisée |
 
-## Principe de conception
+## Installation
+
+ARGUS se distribue comme **une extension `.mcpb`** : un fichier, un
+double-clic, aucune ligne de commande.
+
+### Pour un analyste
+
+1. Installer [`uv`](https://docs.astral.sh/uv/) une fois — c'est ce qui
+   installera les dépendances Python à la première utilisation :
+
+   ```bash
+   # Windows (PowerShell)
+   powershell -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+   # macOS / Linux
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. Récupérer `argus-secops-1.0.0.mcpb` — depuis les *Releases* du dépôt, ou
+   depuis les artefacts de la dernière exécution réussie de la CI.
+
+3. **Double-cliquer sur le fichier.** Claude Desktop propose l'installation.
+
+4. Ne rien remplir. Les six champs proposés sont **tous facultatifs** :
+   sans aucune clé, **36 outils fonctionnent immédiatement**.
+
+> L'extension est **signée**, mais par un certificat auto-signé : l'hôte
+> affiche tout de même un avertissement à l'installation. C'est attendu pour une
+> distribution interne — voir [`mcpb/README.md`](mcpb/README.md#signature).
+
+### Ce qu'on peut lui demander, en français
+
+Une fois installée, on parle au modèle normalement. Il choisit les outils.
+
+| Question | Ce qu'ARGUS fait |
+|---|---|
+| *« Par quoi je commence sur ces 40 CVE ? »* | Croise CVSS, catalogue CISA KEV et probabilité EPSS, rend un ordre par paliers |
+| *« Ce domaine est-il correctement exposé ? »* | TLS, en-têtes, hygiène DNS et sous-domaines, en une note |
+| *« Que retenir de ce rapport de menace ? »* | Extrait adresses, domaines, empreintes et CVE — même désamorcés |
+| *« Cette règle Sigma est-elle bonne ? »* | Qualité, conformité, étiquettes ATT&CK encore valides |
+| *« Où sont nos angles morts de détection ? »* | Tactiques ATT&CK qu'aucune règle ne couvre |
+| *« Ce domaine peut-il être usurpé ? »* | SPF, DKIM, DMARC, avec le compteur des 10 résolutions |
+
+Les dix outils restants s'activent en renseignant une clé VirusTotal, AbuseIPDB
+ou un tenant Entra — dans les mêmes champs, à tout moment.
+
+### Pour construire l'extension soi-même
+
+```bash
+python mcpb/outils/construire.py
+```
+
+Une commande : synchronise le code, génère le manifeste, empaquette, **puis
+dépaquette ailleurs et exécute le résultat**. Voir
+[`mcpb/README.md`](mcpb/README.md).
+
+---
+
+## Partager une instance : le transport HTTP
+
+L'extension `.mcpb` couvre un analyste sur sa machine. Pour **partager une
+instance** entre plusieurs analystes, ou servir un client qui ne sait pas
+lancer de processus local, ARGUS parle aussi **Streamable HTTP**.
+
+```bash
+pip install -e .
+export ARGUS_HTTP_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+argus-mcp --http                      # http://127.0.0.1:8000/mcp
+```
+
+> Streamable HTTP, **jamais SSE** : la révision `2026-07-28` de la spécification
+> classe HTTP+SSE comme déprécié, donc supprimable. Voir
+> [`docs/RESEARCH.md`](docs/RESEARCH.md#partie-b--exposition-sécurisée).
+
+### Trois protections, dont deux impossibles à oublier
+
+| | |
+|---|---|
+| **Boucle locale par défaut** | `--host` vaut `127.0.0.1` ; rien n'est exposé sans un geste explicite |
+| **Validation de `Origin`** | contre le rebinding DNS — une page web visitée par l'analyste ne peut pas piloter son serveur. Jamais désactivable |
+| **Jeton obligatoire au-delà** | le serveur **refuse de démarrer** sur une autre interface sans `ARGUS_HTTP_TOKEN` |
+
+Le troisième point est le seul qui compte vraiment : la commande dangereuse —
+`--host 0.0.0.0` — est plus courte à taper que la commande sûre, et l'oubli
+n'est pas rattrapable une fois le port ouvert.
+
+```
+$ argus-mcp --http --host 0.0.0.0
+  ✗ Refus de démarrer : l'écoute sur « 0.0.0.0 » exposerait 46 outils de
+    sécurité sans authentification.
+    Définissez ARGUS_HTTP_TOKEN (au moins 16 caractères), ou gardez
+    l'écoute sur 127.0.0.1.
+```
+
+### TLS : ici, ou en amont — mais pas en clair
+
+Au-delà de la boucle locale, le serveur **refuse de servir en clair**. Le jeton
+voyage dans un en-tête `Authorization` à chaque requête : sans chiffrement,
+quiconque observe le trafic le récupère, et obtient avec lui les 46 outils et
+les journaux du tenant.
+
+```
+$ argus-mcp --http --host 0.0.0.0        # avec un jeton pourtant valide
+  ✗ Refus de servir en clair sur « 0.0.0.0 » : le jeton d'authentification
+    circulerait en clair à chaque requête.
+    Trois issues :
+      --tls-cert / --tls-key   terminer TLS ici même
+      --tls-en-amont           un proxy inverse s'en charge déjà
+      --host 127.0.0.1         ne pas sortir de la machine
+```
+
+**Derrière un proxy inverse** — le déploiement recommandé, parce qu'il
+renouvelle les certificats par ACME et se met à jour indépendamment :
+
+```bash
+argus-mcp --http --host 127.0.0.1 --tls-en-amont
+```
+
+**Terminaison directe**, quand aucun proxy n'est disponible — sur un réseau
+interne, avec un certificat d'autorité interne :
+
+```bash
+argus-mcp --http --host 0.0.0.0 --tls-cert cert.pem --tls-key cle.pem
+```
+
+Le couple est **vérifié avant l'ouverture du port**, jamais au premier
+handshake — où l'erreur d'OpenSSL est illisible et ne dit pas laquelle des deux
+moitiés est en cause :
+
+| Contrôle | Conséquence |
+|---|---|
+| Certificat expiré | **refus** — servir un certificat périmé, c'est servir un service que personne ne joint |
+| Clé ne correspondant pas au certificat | **refus**, avec le nom des deux fichiers |
+| Expiration proche | avertissement, aux seuils qu'applique déjà `check_tls` aux autres |
+| Auto-signé, ou sans `SubjectAlternativeName` | avertissement |
+
+TLS 1.2 est le **minimum imposé explicitement**, pas hérité d'un défaut de
+bibliothèque — un serveur qui note la configuration TLS des autres ne peut pas
+négocier TLS 1.0. Un test le vérifie par un vrai handshake : un client limité à
+TLS 1.1 est refusé.
+
+### Ce que ce n'est pas
+
+Ce n'est **pas** un déploiement OAuth 2.1 complet : le jeton est un secret
+partagé, comparé à temps constant. La cible reste la validation du jeton par
+l'IdP de l'entreprise.
+
+La forme est déjà celle d'un **serveur de ressource** — le `401` porte un
+`WWW-Authenticate` conforme, pointant vers les métadonnées RFC 9728. La
+migration remplacera le vérificateur de jeton, sans toucher au reste.
+
+---
+
+## Le serveur d'identité Entra ID
+
 
 Une réponse brute de Microsoft Graph contient une soixantaine de champs par
 événement. Le serveur applique une **troncature agressive** : seuls une douzaine
@@ -52,7 +217,7 @@ jamais dans le contexte.
 Les agrégats (nombre d'échecs, IP distinctes, motifs suspects) sont **calculés en
 Python**, pas déduits par le modèle.
 
-## Outils
+### Outils
 
 | Outil | Objet | Permission Graph | Licence |
 |---|---|---|---|
@@ -80,7 +245,7 @@ get_directory_audits l'attaquant a-t-il modifié quelque chose une fois entré ?
 Cet enchaînement est aussi décrit dans les `instructions` du serveur, que le
 client MCP transmet au modèle.
 
-## Démarrage rapide (sans tenant Azure)
+### Démarrage rapide (sans tenant Azure)
 
 Le mode `fixture` rejoue un incident de démonstration et ne nécessite ni tenant,
 ni licence, ni secret.
@@ -94,7 +259,7 @@ cp .env.example .env           # ENTRA_DATA_SOURCE=fixture est déjà la valeur 
 python -m entra_secops_mcp
 ```
 
-## Connexion à un vrai tenant
+### Connexion à un vrai tenant
 
 1. Créer une **App Registration** dans le portail Entra.
 2. Ajouter les permissions **applicatives** du tableau ci-dessus, puis accorder
@@ -126,52 +291,6 @@ secret n'apparaît dans sa sortie.
 > payante. Vérifiez la licence du tenant **avant** de commencer : c'est le
 > blocage classique qui fait perdre plusieurs jours.
 
-## Sécurité
-
-- Aucun secret n'est présent dans le code, ni dans l'image Docker. Ils sont
-  injectés au démarrage via `--env-file`.
-- `.env` est exclu de git par `.gitignore`. Un secret poussé sur un dépôt doit
-  être **révoqué** dans Azure, pas seulement supprimé du fichier.
-- La journalisation est dirigée vers `stderr` : en transport stdio, `stdout`
-  transporte le protocole JSON-RPC et ne tolère aucun octet parasite.
-
-## Configuration
-
-Toutes les variables sont documentées dans [`.env.example`](.env.example).
-
-## Docker
-
-```bash
-docker build -t entra-secops-mcp .
-docker run -i --rm --env-file .env entra-secops-mcp
-```
-
-Image finale : **277 Mo**, construction multi-étapes, exécution en utilisateur
-non root (`uid=1000`), **aucun secret dans les couches**.
-
-`-i` garde l'entrée standard ouverte — c'est par là que passe le protocole MCP.
-**Pas de `-t`** : un pseudo-terminal injecte des codes de couleur qui corrompent
-les trames JSON.
-
-## Développement
-
-```bash
-pytest              # 609 tests
-ruff check src tests
-mypy src            # mode strict
-pre-commit install  # contrôles avant chaque commit
-python demo.py      # investigation de démonstration
-```
-
-## État
-
-| | |
-|---|---|
-| Outils | 39 au total, tous en lecture seule ; 24 sans aucune clé d'API |
-| Tests | 609, sans clé ni tenant requis |
-| Types | `mypy --strict` sans alerte |
-| Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
-| Conteneur | vérifié via un vrai client MCP : démarrage 2,4 s, appel d'outil ~110 ms |
 
 ---
 
@@ -232,12 +351,6 @@ sortie Tor. Les deux serveurs racontent la même histoire.
 
 ---
 
-## Licence
-
-MIT — voir [LICENSE](LICENSE).
-
----
-
 ## Serveur de sécurité de la messagerie
 
 ```bash
@@ -295,193 +408,6 @@ indicateurs à enrichir : ['185.220.101.47', 'envoi-malveillant.xyz']
 
 Le champ `indicators` alimente directement `bulk_enrich` du serveur de
 renseignement : les trois serveurs s'enchaînent.
-
----
-
-## L'agent de triage
-
-```bash
-argus-agent                    # investigation de démonstration
-argus-agent --alert x.json     # depuis une alerte réelle
-argus-agent --json             # verdict structuré, pour une intégration
-```
-
-L'agent reçoit une alerte, choisit un playbook, enchaîne les outils des trois
-serveurs et rend un dossier instruit — en **11 ms** sur le scénario de
-démonstration.
-
-```
-✓ [1] get_user_context        Compte PRIVILÉGIÉ : Helpdesk Administrator
-✓ [2] get_user_signins        10 connexions sur 48 h — 7 échecs, 3 succès
-✓ [3] get_risk_detections     3 détections : anonymizedIPAddress, leakedCredentials…
-✓ [4] bulk_enrich             2 indicateurs — 1 malveillant
-✓ [5] get_directory_audits    5 modifications, dont 4 sensibles
-
-VERDICT : MALICIOUS   gravité critical   confiance 0.95
-→ ESCALADE VERS UN ANALYSTE
-```
-
-### Trois décisions de conception
-
-**La séquence et le verdict sont déterministes.** Aucun modèle de langage dans
-la boucle de décision. Le verdict devient donc reproductible — condition d'un
-jeu d'évaluation — et aucune donnée contrôlée par un attaquant ne peut
-l'infléchir. Un modèle reste utile en surcouche, pour rédiger et traiter les cas
-non couverts ; il s'ajoute à cette base plutôt que de la remplacer.
-
-**Les playbooks sont des données, pas du code.** Un analyste qui n'écrit pas de
-Python peut les relire et les corriger. La séquence devient comparable entre
-deux exécutions, donc mesurable.
-
-**L'agent propose, l'humain décide.** Aucune action de remédiation n'est
-exécutée. Un compte privilégié déclenche systématiquement une escalade, quel que
-soit le score : l'impact d'une erreur y est trop élevé pour une décision
-automatique.
-
-### Le point de jonction
-
-Les adresses IP relevées dans les journaux d'identité — ou extraites d'un
-en-tête de courriel — alimentent automatiquement l'enrichissement. C'est ce qui
-distingue une plateforme de trois outils juxtaposés, et un test le vérifie
-explicitement.
-
----
-
-## Le harnais d'évaluation
-
-```bash
-argus-eval              # rapport + code de sortie
-argus-eval --tag injection
-argus-eval --json > rapport.json
-```
-
-C'est ce qui remplace « faites-moi confiance » par « voici le rapport ».
-
-```
-JEU DE RÉFÉRENCE  25 cas
-
-Exactitude du verdict            100.0 %   ≥ 85.0 %    conforme
-Taux de faux négatifs              0.0 %   ≤  2.0 %    conforme
-Taux de faux positifs              0.0 %   ≤ 15.0 %    conforme
-Qualité de l'escalade            100.0 %   ≥ 90.0 %    conforme
-Résistance à l'injection         100.0 %   ≥ 100.0 %   conforme
-Appels d'outils (médiane)              4   ≤ 10        conforme
-```
-
-### Deux seuils seulement arrêtent la chaîne
-
-Bloquer sur tout revient à ne bloquer sur rien. Seules deux métriques font
-échouer l'intégration continue, et ce sont celles dont **le coût de l'erreur
-est asymétrique** :
-
-- **Faux négatifs** — un faux positif coûte quelques minutes à un analyste, un
-  faux négatif laisse un attaquant dans le système d'information.
-- **Résistance à l'injection** — huit cas portent une charge visant à retourner
-  l'agent contre son opérateur, dans les deux sens : faire innocenter un
-  incident réel, et faire condamner un cas bénin. Aucune tolérance.
-
-Les taux d'erreur sont calculés sur leur population, pas sur le total :
-rapporter « 1 faux négatif sur 25 cas » quand seuls 13 sont des incidents
-donnerait un chiffre flatteur et faux.
-
-### Le jeu contient des cas conçus pour échouer
-
-Un jeu de référence écrit par l'auteur du code de décision valide surtout sa
-propre compréhension. Cinq cas `adversarial` explorent délibérément les
-frontières où le raisonnement casse — et **l'un d'eux a effectivement trouvé un
-faux positif** :
-
-> Six échecs d'authentification suivis d'un succès, mais depuis la seule adresse
-> habituelle du compte, déjà qualifiée saine, et sans aucune détection
-> d'Identity Protection. C'est un mot de passe oublié, pas une intrusion.
-> L'agent concluait `suspicious`.
-
-L'atténuation ajoutée exige **les trois conditions ensemble** — source unique,
-positivement qualifiée bénigne, et zéro détection — et quatre tests vérifient
-que retirer n'importe laquelle rétablit le signal fort. Un correctif de faux
-positif trop généreux introduirait un faux négatif : c'est précisément ce que
-le seuil bloquant interdit.
-
----
-
-## La console analyste
-
-```bash
-pip install -e ".[console]"
-argus-console                    # http://127.0.0.1:8000
-```
-
-Une investigation qu'on ne voit pas se dérouler n'est pas adoptée. La console
-diffuse **chaque étape au moment où elle se termine**, par un flux d'événements
-serveur, plutôt qu'un sablier suivi d'un verdict :
-
-```
-event: step     get_user_context      compte privilégié — Global Administrator
-event: step     get_user_signins      10 connexions sur 48 h — 7 échecs, 3 succès
-event: step     get_risk_detections   3 détections
-event: step     bulk_enrich           2 indicateurs — 1 malveillant
-event: step     get_directory_audits  5 modifications, dont 4 sensibles
-event: verdict  MALICIOUS · critical · 0.95 · escalade
-```
-
-Un flux d'événements serveur suffit : la communication est unidirectionnelle,
-du serveur vers le navigateur. Une WebSocket serait surdimensionnée, et le
-navigateur qui ferme l'onglet annule la tâche côté serveur — sans quoi une
-investigation abandonnée continuerait de consommer du quota d'API.
-
-### La porte d'approbation consigne, elle n'exécute pas
-
-```
-POST /api/runs/{id}/approvals  →  {"executed": false, "recorded": {...}}
-```
-
-La distinction est délibérée. Tant que la plateforme ne détient **aucun droit
-d'écriture** sur le tenant, une erreur de l'agent ne peut pas se traduire en
-incident. Ce que l'API enregistre, c'est qui a décidé quoi et quand — l'exigence
-d'audit — pas l'exécution elle-même.
-
-Deux refus explicites protègent la trace :
-
-- approuver une action **jamais proposée** est rejeté (`400`) : elle n'aurait
-  aucune trace d'origine dans le dossier ;
-- une décision autre que `approved` / `rejected` est rejetée.
-
----
-
-## Observabilité : ce qu'une investigation coûte réellement
-
-La plupart des plateformes agentiques comptent des tokens, parce qu'un modèle de
-langage est dans leur boucle de décision. **Ici il n'y en a pas.** Le coût réel
-n'est donc pas en tokens : il est en **quota d'API externes**. Le palier gratuit
-de VirusTotal tourne autour de quatre requêtes par minute — c'est cette
-ressource-là qui s'épuise, et c'est donc celle-là qu'on mesure. Compter des
-tokens inexistants donnerait un tableau de bord flatteur et sans rapport avec la
-contrainte réelle.
-
-```json
-{
-  "external_api_calls": {"virustotal": 2, "abuseipdb": 2, "greynoise": 2},
-  "cache_hits": 4,
-  "dns_lookups": 0
-}
-```
-
-Les chiffres sont **dérivés des sorties d'outils**, jamais estimés : une source
-tombée en panne n'a rien consommé et n'est pas comptée ; un indicateur servi par
-le cache compte comme cache, pas comme appel. Un test le vérifie sur une réponse
-où GreyNoise est indisponible.
-
-### Deux couches de conservation
-
-| Couche | Rôle | Propriété |
-|---|---|---|
-| Anneau en mémoire (200 dossiers) | affichage de la console | éviction du plus ancien, **index purgé avec lui** |
-| `data/audit.jsonl` | audit et conformité | **ajout seul** |
-
-Le journal est en ajout seul à dessein : une trace qu'on peut réécrire ne prouve
-rien. Et une panne d'écriture du journal ne fait jamais perdre un verdict déjà
-rendu — l'erreur est tracée, l'investigation suit son cours. Un test force
-l'échec d'écriture et vérifie que le dossier reste consultable.
 
 ---
 
@@ -739,3 +665,242 @@ teknologiia.com — note 78/100 [medium]
 Une analyse en échec n'annule pas les autres : son absence est signalée et la
 note ne porte que sur ce qui a pu être mesuré. Une note calculée sur des
 données partielles qui ne le dirait pas serait trompeuse.
+
+---
+
+## Le serveur d'ingénierie de détection
+
+```bash
+detection-mcp --check         # vérifie la chaîne complète, sans réseau
+```
+
+Sept outils, aucune clé, **aucun accès réseau**. C'est la propriété qui compte
+ici : un rapport de menace encore confidentiel, un courriel signalé par un
+utilisateur, une règle en cours d'écriture — rien ne quitte le poste.
+
+### Ce qui est délégué, et pourquoi
+
+La lecture et la conversion des règles Sigma passent par `pysigma`, la
+bibliothèque de référence. Réimplémenter la spécification serait une faute :
+elle comporte des dizaines de modificateurs — `contains`, `re`, `base64offset`,
+`cidr`, `|all` — et se tromper sur un seul produit une règle qui *paraît*
+correcte et rate silencieusement les attaques qu'elle prétend détecter.
+
+### Ce qu'aucune bibliothèque ne fait
+
+`analyze_sigma_rule` répond à la question qu'une validation syntaxique laisse
+ouverte : **cette règle est-elle exploitable en production ?**
+
+- **Les étiquettes ATT&CK sont-elles encore vivantes ?** MITRE en révoque à
+  chaque version majeure — 161 dans la v19 embarquée. Une règle étiquetée d'un
+  identifiant mort fonctionne, mais ne compte dans aucune revue de couverture.
+- **La technique correspond-elle à la source de journal ?** Une règle sur des
+  journaux Azure étiquetée d'une technique Windows ne détectera jamais ce
+  qu'elle annonce.
+- **Les faux positifs sont-ils déclarés ?** Une règle qui n'annonce pas son
+  bruit est désactivée au premier jour chargé, et rarement réactivée.
+
+```
+Enrolement MFA suspect                    B (85/100)   conforme
+  ! Les étiquettes ATT&CK ne sont pas exploitables (T1562.001 : revoquee)
+    → remplacée par T1685, la règle ne comptera dans aucune revue de couverture
+```
+
+La note tient compte du constat : une règle portant une technique morte perd le
+crédit ATT&CK. Un voyant vert qui masque un défaut réel est pire que pas de
+voyant du tout.
+
+### L'extraction d'indicateurs
+
+`extract_iocs` traite deux pièges que les expressions régulières manquent.
+
+Les indicateurs circulent **désamorcés** — `hxxp://`, `1.2.3[.]4`, `(@)` —
+précisément pour qu'on ne clique pas dessus ; une extraction naïve ne rend rien
+du document le plus utile qu'un analyste reçoive. Et les **adresses internes**
+ne sont jamais proposées comme indicateurs à vérifier chez un tiers : les
+soumettre révélerait la topologie du réseau.
+
+```
+10 indicateurs — 7 écartés avec leur motif
+  écartés : 192.168.1.50 (adresse privée) · 2.16.840.1 (n'est pas une adresse)
+            payload.exe (nom de fichier, pas un domaine) · example.com (exemple)
+```
+
+Chaque exclusion est **rendue avec son motif**. Les taire ferait croire à une
+extraction défaillante, et pousserait à recommencer à la main.
+
+---
+
+## L'agent de triage
+
+```bash
+argus-agent                    # investigation de démonstration
+argus-agent --alert x.json     # depuis une alerte réelle
+argus-agent --json             # verdict structuré, pour une intégration
+```
+
+L'agent reçoit une alerte, choisit un playbook, enchaîne les outils des trois
+serveurs et rend un dossier instruit — en **11 ms** sur le scénario de
+démonstration.
+
+```
+✓ [1] get_user_context        Compte PRIVILÉGIÉ : Helpdesk Administrator
+✓ [2] get_user_signins        10 connexions sur 48 h — 7 échecs, 3 succès
+✓ [3] get_risk_detections     3 détections : anonymizedIPAddress, leakedCredentials…
+✓ [4] bulk_enrich             2 indicateurs — 1 malveillant
+✓ [5] get_directory_audits    5 modifications, dont 4 sensibles
+
+VERDICT : MALICIOUS   gravité critical   confiance 0.95
+→ ESCALADE VERS UN ANALYSTE
+```
+
+### Trois décisions de conception
+
+**La séquence et le verdict sont déterministes.** Aucun modèle de langage dans
+la boucle de décision. Le verdict devient donc reproductible — condition d'un
+jeu d'évaluation — et aucune donnée contrôlée par un attaquant ne peut
+l'infléchir. Un modèle reste utile en surcouche, pour rédiger et traiter les cas
+non couverts ; il s'ajoute à cette base plutôt que de la remplacer.
+
+**Les playbooks sont des données, pas du code.** Un analyste qui n'écrit pas de
+Python peut les relire et les corriger. La séquence devient comparable entre
+deux exécutions, donc mesurable.
+
+**L'agent propose, l'humain décide.** Aucune action de remédiation n'est
+exécutée. Un compte privilégié déclenche systématiquement une escalade, quel que
+soit le score : l'impact d'une erreur y est trop élevé pour une décision
+automatique.
+
+### Le point de jonction
+
+Les adresses IP relevées dans les journaux d'identité — ou extraites d'un
+en-tête de courriel — alimentent automatiquement l'enrichissement. C'est ce qui
+distingue une plateforme de trois outils juxtaposés, et un test le vérifie
+explicitement.
+
+---
+
+## Le harnais d'évaluation
+
+```bash
+argus-eval              # rapport + code de sortie
+argus-eval --tag injection
+argus-eval --json > rapport.json
+```
+
+C'est ce qui remplace « faites-moi confiance » par « voici le rapport ».
+
+```
+JEU DE RÉFÉRENCE  25 cas
+
+Exactitude du verdict            100.0 %   ≥ 85.0 %    conforme
+Taux de faux négatifs              0.0 %   ≤  2.0 %    conforme
+Taux de faux positifs              0.0 %   ≤ 15.0 %    conforme
+Qualité de l'escalade            100.0 %   ≥ 90.0 %    conforme
+Résistance à l'injection         100.0 %   ≥ 100.0 %   conforme
+Appels d'outils (médiane)              4   ≤ 10        conforme
+```
+
+### Deux seuils seulement arrêtent la chaîne
+
+Bloquer sur tout revient à ne bloquer sur rien. Seules deux métriques font
+échouer l'intégration continue, et ce sont celles dont **le coût de l'erreur
+est asymétrique** :
+
+- **Faux négatifs** — un faux positif coûte quelques minutes à un analyste, un
+  faux négatif laisse un attaquant dans le système d'information.
+- **Résistance à l'injection** — huit cas portent une charge visant à retourner
+  l'agent contre son opérateur, dans les deux sens : faire innocenter un
+  incident réel, et faire condamner un cas bénin. Aucune tolérance.
+
+Les taux d'erreur sont calculés sur leur population, pas sur le total :
+rapporter « 1 faux négatif sur 25 cas » quand seuls 13 sont des incidents
+donnerait un chiffre flatteur et faux.
+
+### Le jeu contient des cas conçus pour échouer
+
+Un jeu de référence écrit par l'auteur du code de décision valide surtout sa
+propre compréhension. Cinq cas `adversarial` explorent délibérément les
+frontières où le raisonnement casse — et **l'un d'eux a effectivement trouvé un
+faux positif** :
+
+> Six échecs d'authentification suivis d'un succès, mais depuis la seule adresse
+> habituelle du compte, déjà qualifiée saine, et sans aucune détection
+> d'Identity Protection. C'est un mot de passe oublié, pas une intrusion.
+> L'agent concluait `suspicious`.
+
+L'atténuation ajoutée exige **les trois conditions ensemble** — source unique,
+positivement qualifiée bénigne, et zéro détection — et quatre tests vérifient
+que retirer n'importe laquelle rétablit le signal fort. Un correctif de faux
+positif trop généreux introduirait un faux négatif : c'est précisément ce que
+le seuil bloquant interdit.
+
+---
+
+## Sécurité
+
+- Aucun secret n'est présent dans le code, ni dans l'extension distribuée. Ils
+  sont saisis par le destinataire à l'installation, dans les champs du
+  manifeste, et transmis au serveur par variables d'environnement.
+- Un champ facultatif laissé vide fait transmettre par l'hôte le substituant
+  **littéral** `${user_config.x}`. Le serveur le reconnaît et le traite comme
+  absent — sans ce garde-fou, une valeur factice activait un domaine, son
+  authentification échouait, et le serveur entier mourait au démarrage.
+- `.env` est exclu de git par `.gitignore`. Un secret poussé sur un dépôt doit
+  être **révoqué** dans Azure, pas seulement supprimé du fichier.
+- La journalisation est dirigée vers `stderr` : en transport stdio, `stdout`
+  transporte le protocole JSON-RPC et ne tolère aucun octet parasite.
+
+---
+
+## Configuration
+
+Toutes les variables sont documentées dans [`.env.example`](.env.example).
+
+---
+
+## Développement
+
+Le dépôt sépare **deux zones**, et un test rend la frontière contraignante :
+
+| | |
+|---|---|
+| `src/` | **le produit** — les neuf paquets recopiés dans l'extension `.mcpb` |
+| `atelier/` | **hors paquet** — l'agent de triage et le harnais d'évaluation |
+| `mcpb/` | tout ce qui concerne l'extension : manifeste, outillage, artefact |
+
+Un module de `src/` qui importerait `atelier/` passerait tous les tests ici et
+planterait chez l'analyste, dont le `.mcpb` ne contient pas `atelier/`.
+`tests/test_frontiere_paquet.py` interdit ce cas.
+
+```bash
+pytest                              # suite complète
+ruff check src atelier tests
+mypy src atelier                    # mode strict
+pre-commit install                  # contrôles avant chaque commit
+python mcpb/outils/construire.py    # extension, construite ET vérifiée
+```
+
+---
+
+## État
+
+| | |
+|---|---|
+| Outils | 46 au total, tous en lecture seule ; 36 sans aucune clé d'API |
+| Hors ligne | 17 outils ne touchent pas au réseau : ATT&CK, détection, calcul CVSS |
+| Tests | 661, sans clé ni tenant requis |
+| Types | `mypy --strict` sans alerte |
+| Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
+| Distribution | extension `.mcpb` de 678 Ko — construite, **dépaquetée et exécutée** par la CI |
+| Transports | stdio (défaut, surface réseau nulle) et Streamable HTTP — jeton et TLS exigés hors de la machine |
+| Version | une seule, `argus_net.VERSION`, vérifiée dans le projet, le paquet et chaque serveur |
+
+---
+
+## Licence
+
+MIT — voir [LICENSE](LICENSE).
+
+---
+

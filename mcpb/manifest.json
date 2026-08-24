@@ -3,8 +3,9 @@
   "name": "argus-secops",
   "display_name": "ARGUS — Plateforme SecOps",
   "version": "1.0.0",
-  "description": "39 outils SecOps en lecture seule : CVE/KEV/EPSS, MITRE ATT&CK hors ligne, TLS, DNS, SPF/DKIM/DMARC, reputation d'indicateurs, Entra ID.",
-  "long_description": "ARGUS expose la telemetrie de securite comme outils executables par un agent. Vingt-neuf outils fonctionnent SANS AUCUNE CLE d'API : vulnerabilites (NVD, catalogue CISA des failles activement exploitees, probabilite d'exploitation EPSS), MITRE ATT&CK avec son corpus embarque — donc utilisable hors ligne —, inspection TLS par connexion directe, hygiene DNS (DNSSEC, CAA, alias pendants), en-tetes de securite, transparence des certificats, et posture de messagerie SPF/DKIM/DMARC. Dix outils supplementaires s'activent si vous fournissez vos propres cles VirusTotal, AbuseIPDB ou un tenant Microsoft Entra.\n\nCe n'est pas un relais d'API. Les notes CVSS sont RECALCULEES localement a partir du vecteur et confrontees a 138 vecteurs reels du NVD ; le classement des vulnerabilites est deterministe et par paliers ; l'inspection TLS ouvre sa propre connexion, ce qui fonctionne aussi sur un hote interne. Tous les outils sont en LECTURE SEULE : rien n'est jamais modifie.",
+  "icon": "icon.png",
+  "description": "46 outils SecOps en lecture seule : CVE/KEV/EPSS, MITRE ATT&CK hors ligne, regles Sigma et indicateurs, TLS, DNS, SPF/DKIM/DMARC, reputation d'indicateurs, Entra ID.",
+  "long_description": "ARGUS expose la telemetrie de securite comme outils executables par un agent. 36 outils fonctionnent SANS AUCUNE CLE d'API : vulnerabilites (NVD, catalogue CISA des failles activement exploitees, probabilite d'exploitation EPSS), MITRE ATT&CK avec son corpus embarque — donc utilisable hors ligne —, ingenierie de detection (extraction d'indicateurs, analyse et conversion de regles Sigma, couverture ATT&CK) egalement hors ligne, inspection TLS par connexion directe, hygiene DNS (DNSSEC, CAA, alias pendants), en-tetes de securite, transparence des certificats, et posture de messagerie SPF/DKIM/DMARC. 10 outils supplementaires s'activent si vous fournissez vos propres cles VirusTotal, AbuseIPDB ou un tenant Microsoft Entra.\n\nCe n'est pas un relais d'API. Les notes CVSS sont RECALCULEES localement a partir du vecteur et confrontees a 138 vecteurs reels du NVD ; le classement des vulnerabilites est deterministe et par paliers ; l'inspection TLS ouvre sa propre connexion, ce qui fonctionne aussi sur un hote interne. Tous les outils sont en LECTURE SEULE : rien n'est jamais modifie.",
   "author": {
     "name": "Sultan Zeineddine",
     "url": "https://github.com/Sultan-zd"
@@ -58,7 +59,7 @@
     "virustotal_api_key": {
       "type": "string",
       "title": "Cle VirusTotal (facultatif)",
-      "description": "Active les outils de reputation d'indicateurs. Le palier gratuit suffit. Sans cle, les 29 autres outils fonctionnent.",
+      "description": "Active les outils de reputation d'indicateurs. Le palier gratuit suffit. Sans cle, les 36 autres outils fonctionnent.",
       "sensitive": true,
       "required": false
     },
@@ -222,6 +223,34 @@
     {
       "name": "parse_cvss",
       "description": "Décode un vecteur CVSS et **recalcule** la note, sans rien interroger."
+    },
+    {
+      "name": "extract_iocs",
+      "description": "Extrait les indicateurs d'un texte : adresses, domaines, URL, empreintes, CVE."
+    },
+    {
+      "name": "defang_iocs",
+      "description": "Désamorce des indicateurs pour les partager sans risque de clic."
+    },
+    {
+      "name": "analyze_sigma_rule",
+      "description": "Analyse une règle Sigma : conformité, qualité, et rattachement à ATT&CK."
+    },
+    {
+      "name": "explain_sigma_rule",
+      "description": "Explique en français ce qu'une règle Sigma cherche, sans jargon."
+    },
+    {
+      "name": "convert_sigma_rule",
+      "description": "Traduit une règle Sigma en requête Sentinel (KQL), Splunk (SPL) ou Lucene."
+    },
+    {
+      "name": "check_detection_coverage",
+      "description": "Dit ce qu'un jeu de règles couvre dans ATT&CK — et surtout ce qu'il ignore."
+    },
+    {
+      "name": "suggest_detection_for_technique",
+      "description": "Par où commencer pour détecter une technique : journaux, signaux, squelette Sigma."
     },
     {
       "name": "enrich_ip",

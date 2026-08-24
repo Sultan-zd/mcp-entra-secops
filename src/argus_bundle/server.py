@@ -1,11 +1,11 @@
-"""Serveur unique regroupant les six domaines d'ARGUS.
+"""Serveur unique regroupant les sept domaines d'ARGUS.
 
-**Pourquoi ce serveur existe.** Les six serveurs restent la bonne architecture
+**Pourquoi ce serveur existe.** Les sept serveurs restent la bonne architecture
 pour un poste d'analyste : le secret Entra et la clé VirusTotal ne vivent pas
 dans le même processus, et on ne lance que ce dont on a besoin.
 
 Mais pour **distribuer** — à une équipe SOC, sous forme d'un fichier unique —
-six déclarations à recopier à la main sont six occasions de se tromper. Ce
+sept déclarations à recopier à la main sont sept occasions de se tromper. Ce
 module réunit donc les mêmes outils, sans les réécrire, dans un seul serveur.
 
 Le compromis est assumé et il porte sur le cloisonnement : ici, toutes les
@@ -28,7 +28,11 @@ from contextlib import AsyncExitStack, asynccontextmanager
 from typing import Any
 
 from mcp.server import MCPServer
+from mcp.server.auth.provider import TokenVerifier
+from mcp.server.auth.settings import AuthSettings
 from mcp.types import ToolAnnotations
+
+from argus_net import VERSION
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +57,11 @@ INSTRUCTIONS = """\
 ARGUS — plateforme SecOps. Tous les outils sont en LECTURE SEULE : rien n'est
 jamais modifié, ni sur un tenant, ni sur un domaine, ni sur un hôte.
 
-SIX DOMAINES
+SEPT DOMAINES
 
   Vulnérabilités   CVE, catalogue CISA des failles exploitées, probabilité EPSS
   MITRE ATT&CK     techniques, détections, correspondances — SANS RÉSEAU
+  Détection        indicateurs, règles Sigma, couverture — SANS RÉSEAU
   Web et TLS       certificats, en-têtes, hygiène DNS, sous-domaines
   Messagerie       SPF, DKIM, DMARC, en-têtes de message
   Renseignement    réputation d'IP, domaines, empreintes de fichiers
@@ -64,11 +69,14 @@ SIX DOMAINES
 
 Les deux derniers n'apparaissent que si leurs clés sont configurées.
 
-LES TROIS OUTILS QUI RÉPONDENT AUX VRAIES QUESTIONS
+LES OUTILS QUI RÉPONDENT AUX VRAIES QUESTIONS
 
-  « Par quoi je commence ? »        → prioritize_cves
-  « Ce domaine est-il exposé ? »    → check_web_exposure
-  « Comment nommer ce que je vois ? » → map_findings_to_attack
+  « Par quoi je commence ? »            → prioritize_cves
+  « Ce domaine est-il exposé ? »        → check_web_exposure
+  « Comment nommer ce que je vois ? »   → map_findings_to_attack
+  « Que retenir de ce rapport ? »       → extract_iocs
+  « Cette règle est-elle bonne ? »      → analyze_sigma_rule
+  « Où sont nos angles morts ? »        → check_detection_coverage
 
 CE QUI EST FIABLE ET REPRODUCTIBLE
 
@@ -111,7 +119,7 @@ def _config(nom: str) -> str | None:
     Un simple test de vérité la juge donc renseignée. C'est exactement ce qui
     s'est produit à la première installation réelle : le domaine identité
     s'activait, azure-identity refusait ce faux identifiant de tenant, et le
-    serveur entier mourait au démarrage. Les 29 outils sans clé partaient avec.
+    serveur entier mourait au démarrage. Tous les outils sans clé partaient avec.
     """
     valeur = (os.environ.get(nom) or "").strip()
     if not valeur or _SUBSTITUANT.match(valeur):
@@ -141,6 +149,7 @@ def domaines_actifs() -> dict[str, bool]:
     return {
         "vulnerabilites": True,
         "mitre": True,
+        "detection": True,
         "web": True,
         "messagerie": True,
         "renseignement": _clefs_renseignement(),
@@ -169,7 +178,7 @@ async def lifespan(_server: Any) -> AsyncIterator[None]:
 
         # Un domaine facultatif qui refuse de démarrer ne doit pas emporter
         # les autres. C'est le second enseignement de la même panne : une clé
-        # erronée faisait perdre les 29 outils qui n'en demandent aucune.
+        # erronée faisait perdre tous les outils qui n'en demandent aucune.
         if actifs["renseignement"]:
             from threat_intel_mcp.runtime import lifespan as renseignement
 
@@ -215,8 +224,21 @@ def _enregistrer(
         server.tool(annotations=annotations)(outil)
 
 
-def build_server() -> MCPServer:
-    """Construit le serveur unique et y enregistre tous les outils disponibles."""
+def build_server(
+    *,
+    token_verifier: TokenVerifier | None = None,
+    auth: AuthSettings | None = None,
+) -> MCPServer:
+    """Construit le serveur unique et y enregistre tous les outils disponibles.
+
+    `token_verifier` et `auth` ne servent qu'au transport HTTP, où un port est
+    ouvert. En stdio — le mode par défaut — ils restent nuls : le client lance
+    lui-même le processus, il n'y a personne d'autre à authentifier.
+
+    Le SDK refuse l'un sans l'autre ; les deux sont donc transmis ensemble ou
+    pas du tout.
+    """
+    from detection_mcp import tools as t_det
     from email_security_mcp import tools as t_mail
     from mitre_mcp import tools as t_mitre
     from vuln_intel_mcp import tools as t_vuln
@@ -225,9 +247,11 @@ def build_server() -> MCPServer:
     server: MCPServer = MCPServer(
         name="ARGUS",
         title="ARGUS — plateforme SecOps",
-        version="1.0.0",
+        version=VERSION,
         instructions=INSTRUCTIONS,
         lifespan=lifespan,
+        token_verifier=token_verifier,
+        auth=auth,
     )
 
     # --- toujours disponibles, aucune clé requise -------------------------
@@ -272,6 +296,13 @@ def build_server() -> MCPServer:
             t_mitre.list_known_findings,
             t_mitre.corpus_info,
             t_vuln.parse_cvss,
+            t_det.extract_iocs,
+            t_det.defang_iocs,
+            t_det.analyze_sigma_rule,
+            t_det.explain_sigma_rule,
+            t_det.convert_sigma_rule,
+            t_det.check_detection_coverage,
+            t_det.suggest_detection_for_technique,
         ),
     )
 

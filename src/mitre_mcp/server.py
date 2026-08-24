@@ -5,6 +5,8 @@ from __future__ import annotations
 from mcp.server import MCPServer
 from mcp.types import ToolAnnotations
 
+from argus_net import VERSION
+
 from .tools import (
     build_navigator_layer,
     corpus_info,
@@ -77,7 +79,7 @@ def build_server() -> MCPServer:
     server: MCPServer = MCPServer(
         name="MitreAttack",
         title="MITRE ATT&CK (hors ligne)",
-        version="0.1.0",
+        version=VERSION,
         instructions=INSTRUCTIONS,
     )
 

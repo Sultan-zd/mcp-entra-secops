@@ -11,7 +11,16 @@ from .feeds import FeedCache, FeedError
 from .http import HttpError, PublicHttpClient
 from .ratelimit import QuotaExceededError, RateLimiterRegistry, TokenBucket
 
+#: Version du produit, source unique pour tout le depot.
+#:
+#: Les serveurs l'annoncent au client MCP, le manifeste du paquet la
+#: reprend, et un test verifie qu'aucune copie ne diverge. Un numero
+#: recopie a la main devient faux au premier oubli, et le destinataire
+#: ne sait plus quelle version il a installee.
+VERSION = "1.0.0"
+
 __all__ = [
+    "VERSION",
     "FeedCache",
     "FeedError",
     "HttpError",
