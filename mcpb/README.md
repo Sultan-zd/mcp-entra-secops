@@ -57,7 +57,7 @@ scripts qui pointent vers des chemins inexistants chez lui.
 Le format MCPB accepte deux façons de livrer un serveur Python. Embarquer les
 dépendances donnerait un paquet **par plateforme et par version de Python** —
 `cryptography` et `pydantic-core` sont compilés. Avec `uv`, un seul fichier de
-946 Ko fonctionne sur Windows, macOS et Linux.
+947 Ko fonctionne sur Windows, macOS et Linux.
 
 Le prix : le destinataire installe `uv` une fois. Voir
 [`../docs/INSTALLER.md`](../docs/INSTALLER.md).
@@ -79,6 +79,20 @@ porte pas.
 **Ce qu'elle n'apporte pas** : le certificat est auto-signé. Aucune autorité ne
 se porte garante, et l'hôte affichera toujours un avertissement à
 l'installation.
+
+### Côté destinataire
+
+Publier une empreinte ne sert à rien si celui qui reçoit le fichier ne peut pas
+calculer celle de ce qu'il a reçu — il n'a ni la clé privée, ni le certificat.
+
+```bash
+python mcpb/outils/signer.py --verifier argus-secops-1.0.0.mcpb
+```
+
+Ce mode ne signe rien et **n'exige aucune clé** : il lit le certificat contenu
+dans l'archive et affiche son empreinte, à comparer avec celle publiée par un
+canal distinct du paquet. Procédure complète, et ce qu'elle établit ou non :
+[`../SECURITY.md`](../SECURITY.md#7--vérifier-un-paquet-reçu).
 
 ### `mcpb verify` répondra toujours « not signed »
 

@@ -170,7 +170,7 @@ teknologiia.com   note A (100/100)  SPF 1/10 lookups · DKIM 2 clés · DMARC re
 pytest
 ```
 
-Résultat attendu : **1003 tests**, tous verts, **sans aucun accès réseau ni clé
+Résultat attendu : **1006 tests**, tous verts, **sans aucun accès réseau ni clé
 d'API**. Les sources publiques sont simulées ; un test qui dépendrait de la
 disponibilité du NVD finirait par être ignoré.
 
@@ -441,7 +441,7 @@ python mcpb/outils/construire.py
 2 · Générer le manifeste
   ✓ 57 outils déclarés par le serveur lui-même
 3 · Empaqueter
-  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (946 Ko)
+  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (947 Ko)
 4 · Vérifier l'artefact
   ✓ exécuté depuis une copie dépaquetée — 47 outils exposés.
   ✓ 130 fichiers, aucun artefact de construction embarqué

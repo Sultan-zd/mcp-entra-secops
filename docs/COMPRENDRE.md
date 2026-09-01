@@ -33,7 +33,7 @@ la fin.
 > plus à se connecter ? », et obtenir en quelques secondes un dossier d'enquête
 > fondé sur les vraies données de l'entreprise.**
 
-Un fichier de 946 Ko. Aucune ligne de commande, aucun dépôt à cloner. Le
+Un fichier de 947 Ko. Aucune ligne de commande, aucun dépôt à cloner. Le
 destinataire installe `uv` une fois, double-clique, et **47 des 57 outils
 fonctionnent immédiatement, sans aucune clé d'API**.
 
@@ -1088,7 +1088,7 @@ rapport précis à l'extension.
 | `src/` | **est** le paquet — les 10 paquets recopiés dedans | oui |
 | `mcpb/` | **le fabrique** — manifeste, empaquetage, signature, vérification | non |
 | `scripts/` | **produit ce qu'il embarque** — corpus ATT&CK, CWE, D3FEND, événements Windows | non, leur sortie oui |
-| `tests/` | **prouve qu'il fonctionne** — 1003 tests | non |
+| `tests/` | **prouve qu'il fonctionne** — 1006 tests | non |
 | `atelier/` | **valide que ses outils s'enchaînent**, sans modèle IA | non |
 | `docs/` | **l'explique** — installer, comprendre, modifier | non |
 
@@ -1211,7 +1211,9 @@ mcp-entra-secops/
 │   ├── ENTRA.md                 ★ permissions au plus juste, licences, validation
 │   ├── RESEARCH.md                 scan du marché, exposition sécurisée
 │   └── COMPRENDRE.md               ← ce document
-└── .github/workflows/ci.yml     ← lint, types, tests, évaluation, paquet, Trivy
+├── SECURITY.md                   ★ modèle de menace, incidents passés, vérification
+├── .github/workflows/ci.yml     ← lint, types, tests, évaluation, secrets, paquet
+└── .github/workflows/fraicheur-corpus.yml ← les corpus ont-ils divergé ?
 ```
 
 Les fichiers marqués ★ sont ceux où se concentre la valeur réelle du projet. Si

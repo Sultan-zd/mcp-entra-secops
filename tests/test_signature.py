@@ -20,6 +20,7 @@ strict que `zipfile` ne reste caché derrière un contrôle trop indulgent.
 
 from __future__ import annotations
 
+import re
 import struct
 import sys
 import zipfile
@@ -179,7 +180,7 @@ def test_signer_deux_fois_de_suite_est_refuse(
     ancien_mcpb = module_signer.MCPB
     module_signer.MCPB = tmp_path
     try:
-        code = module_signer.main()
+        code = module_signer.main([])
     finally:
         module_signer.MCPB = ancien_mcpb
 
@@ -199,3 +200,52 @@ def test_le_paquet_distribue_reellement_est_bien_forme() -> None:
         pytest.skip("aucun paquet construit — lancer construire.py d'abord")
 
     assert _verifier_zip_strict(archive) is True
+
+
+# --------------------------------------------------------------------------
+# Le contrôle côté destinataire
+# --------------------------------------------------------------------------
+def test_verifier_refuse_un_paquet_sans_signature(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    """Un paquet non signé doit être refusé bruyamment, pas accepté par défaut."""
+    from signer import verifier
+
+    archive = _archive_minimale(tmp_path)
+
+    assert verifier(archive) == 1
+    assert "AUCUNE signature" in capsys.readouterr().out
+
+
+def test_verifier_refuse_un_fichier_absent(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from signer import verifier
+
+    assert verifier(tmp_path / "nexiste-pas.mcpb") == 1
+    assert "introuvable" in capsys.readouterr().out
+
+
+def test_verifier_rend_l_empreinte_du_paquet_reellement_distribue(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Le seul contrôle qu'un destinataire puisse faire : il n'a que le paquet.
+
+    Une empreinte publiée ne sert à rien si celui qui reçoit le fichier n'a
+    aucun moyen de calculer celle de ce qu'il a réellement reçu — et il n'a
+    ni la clé privée, ni le certificat.
+    """
+    from signer import verifier
+
+    archive = RACINE / "mcpb" / "dist" / "argus-secops-1.0.0.mcpb"
+    if not archive.exists():
+        pytest.skip("aucun paquet construit — lancer construire.py d'abord")
+    if b"MCPB_SIG_V1" not in archive.read_bytes():
+        pytest.skip("paquet non signé — lancer signer.py d'abord")
+
+    assert verifier(archive) == 0
+
+    sortie = capsys.readouterr().out
+    assert "empreinte du certificat porté par l'archive" in sortie
+    # Une empreinte SHA-256 en hexadécimal séparé par des deux-points.
+    assert re.search(r"(?:[0-9A-F]{2}:){31}[0-9A-F]{2}", sortie), sortie

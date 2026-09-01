@@ -45,6 +45,7 @@ La perdre signifie changer d'empreinte, donc prévenir les destinataires.
 
 from __future__ import annotations
 
+import argparse
 import datetime as dt
 import shutil
 import struct
@@ -217,6 +218,7 @@ def _controler_bloc(archive: Path) -> bool:
         return False
 
     from cryptography import x509
+    from cryptography.hazmat.primitives import hashes
 
     sujet = certificats[0].subject.get_attributes_for_oid(x509.oid.NameOID.COMMON_NAME)
     if sujet:
@@ -228,6 +230,12 @@ def _controler_bloc(archive: Path) -> bool:
         nom = "(sans nom commun)"
     print(f"  ✓ bloc PKCS#7 valide, {longueur} octets")
     print(f"  ✓ signé par : {nom}")
+    # L'empreinte du certificat TROUVÉ DANS L'ARCHIVE — pas celle du fichier
+    # local. C'est la seule que puisse calculer un destinataire, qui n'a que
+    # le paquet ; publier l'autre serait lui demander de nous croire sur
+    # parole.
+    print("  ✓ empreinte du certificat porté par l'archive :")
+    print(f"      {certificats[0].fingerprint(hashes.SHA256()).hex(':').upper()}")
     return True
 
 
@@ -265,11 +273,69 @@ def _verifier_zip_strict(archive: Path) -> bool:
     return True
 
 
-def main() -> int:
+def verifier(chemin: Path) -> int:
+    """Le contrôle côté DESTINATAIRE : n'exige aucune clé privée.
+
+    Un destinataire n'a que le paquet. Publier une empreinte ne lui sert à
+    rien s'il n'a aucun moyen de calculer celle de ce qu'il a reçu — c'est
+    ce que fait ce mode.
+
+    Il ne prouve pas *qui* a signé : le certificat est auto-signé, aucune
+    autorité ne s'en porte garante. Il établit que le paquet porte une
+    signature bien formée, et **par quel certificat** — à comparer, à la main,
+    avec l'empreinte publiée par un canal distinct.
+    """
+    if not chemin.exists():
+        print(f"\n  ✗ fichier introuvable : {chemin}\n")
+        return 1
+
+    print()
+    print(f"Vérification de {chemin.name}")
+    print("─" * (16 + len(chemin.name)))
+
+    if b"MCPB_SIG_V1" not in chemin.read_bytes():
+        print("  ✗ ce paquet ne porte AUCUNE signature.")
+        print("    Un paquet non signé peut avoir été modifié en chemin.")
+        print()
+        return 1
+
+    if not _controler_bloc(chemin):
+        print()
+        return 1
+    if not _verifier_zip_strict(chemin):
+        print()
+        return 1
+
+    print()
+    print("  Comparez l'empreinte ci-dessus avec celle publiée par l'émetteur,")
+    print("  reçue par un canal DISTINCT du paquet. Si elles diffèrent, ou si")
+    print("  vous n'avez pas d'empreinte de référence, n'installez pas.")
+    print()
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    # `argv` explicite plutot que sys.argv : sous pytest, sys.argv porte
+    # les arguments de pytest, qu'argparse rejetterait.
     sys.path.insert(0, str(RACINE / "src"))
     from argus_net import forcer_utf8
 
     forcer_utf8()
+
+    analyseur = argparse.ArgumentParser(
+        prog="signer.py",
+        description="Signe l'extension .mcpb, ou vérifie un paquet reçu.",
+    )
+    analyseur.add_argument(
+        "--verifier",
+        metavar="PAQUET",
+        help="Ne signe rien : contrôle la signature d'un .mcpb reçu et affiche "
+        "l'empreinte du certificat qui le porte. N'exige aucune clé privée.",
+    )
+    arguments = analyseur.parse_args(argv)
+
+    if arguments.verifier:
+        return verifier(Path(arguments.verifier))
 
     archives = sorted((MCPB / "dist").glob("*.mcpb"))
     if not archives:
