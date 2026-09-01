@@ -21,6 +21,16 @@ annonçait un succès — et le défaut n'apparaissait que chez le destinataire,
 la première commande qu'il lance. Un paquet n'est vérifié que s'il a été
 exécuté depuis une copie dépaquetée.
 
+**Ce que cette étape ne couvre PAS : l'archive une fois signée.** La
+signature (`mcpb/outils/signer.py`) s'applique *après* cette vérification, en
+modifiant les octets du fichier. `mcpb sign` (CLI `@anthropic-ai/mcpb`) laisse
+le champ de longueur de commentaire de l'enregistrement ZIP de fin d'archive
+(EOCD) à sa valeur d'origine — Python le tolère, Claude Desktop non, et
+l'installation échoue avec « Invalid comment length » sans que cette étape ne
+l'ait vu passer. `signer.py` porte son propre contrôle strict, exécuté après
+la signature ; lancez-le systématiquement après `construire.py` avant de
+distribuer.
+
 Options :
 
     --sans-verification   s'arrête après l'empaquetage (plus rapide)

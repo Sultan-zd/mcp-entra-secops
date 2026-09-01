@@ -20,6 +20,8 @@ dependencies = [
     "pysigma-backend-splunk>=2.1",
     "pysigma-backend-elasticsearch>=2.1",
     "PyYAML>=6.0",
+    "plyara>=2.2",
+    "yara-python>=4.5",
 ]
 
 [build-system]

@@ -40,6 +40,11 @@ dependencies = [
     # module l'importe directement : une dependance transitive peut disparaitre
     # sans preavis.
     "PyYAML>=6.0",
+    # Analyse de regles YARA. plyara lit la structure (tolerante par endroits,
+    # stricte a d'autres, verifie en testant) ; yara-python (compilateur
+    # officiel) juge de la conformite reelle.
+    "plyara>=2.2",
+    "yara-python>=4.5",
 ]
 
 [project.optional-dependencies]
@@ -62,6 +67,7 @@ email-security-mcp = "email_security_mcp.__main__:main"
 vuln-intel-mcp = "vuln_intel_mcp.__main__:main"
 mitre-attack-mcp = "mitre_mcp.__main__:main"
 detection-mcp = "detection_mcp.__main__:main"
+artefact-mcp = "artefact_mcp.__main__:main"
 web-recon-mcp = "web_recon_mcp.__main__:main"
 argus-mcp = "argus_bundle.__main__:main"
 argus-agent = "argus_agent.__main__:main"
@@ -80,6 +86,7 @@ packages = [
     "src/vuln_intel_mcp",
     "src/mitre_mcp",
     "src/detection_mcp",
+    "src/artefact_mcp",
     "src/web_recon_mcp",
     "src/argus_bundle",
     # --- atelier/ : HORS PAQUET ------------------------------------------
@@ -105,7 +112,10 @@ ignore = ["S101"]  # assert autorisé dans les tests
 # L'outillage de construction lance des commandes ecrites en dur dans le
 # fichier lui-meme, jamais une entree utilisateur.
 "mcpb/outils/*" = ["S603"]
-"scripts/*" = ["S603"]
+# S314 : les scripts de distillation analysent du XML/JSON telecharge depuis
+# des sources officielles de premiere partie (MITRE), jamais une entree
+# utilisateur — le risque que S314 signale ne s'applique pas ici.
+"scripts/*" = ["S603", "S314"]
 
 # ---------------------------------------------------------------------------
 [tool.mypy]
@@ -116,7 +126,7 @@ disallow_untyped_defs = true
 plugins = ["pydantic.mypy"]
 
 [[tool.mypy.overrides]]
-module = ["mcp.*", "azure.*", "redis.*", "dns.*", "sigma.*"]
+module = ["mcp.*", "azure.*", "redis.*", "dns.*", "sigma.*", "plyara.*", "yara.*"]
 ignore_missing_imports = true
 
 # ---------------------------------------------------------------------------
