@@ -4,8 +4,8 @@
   "display_name": "ARGUS — Plateforme SecOps",
   "version": "1.0.0",
   "icon": "icon.png",
-  "description": "46 outils SecOps en lecture seule : CVE/KEV/EPSS, MITRE ATT&CK hors ligne, regles Sigma et indicateurs, TLS, DNS, SPF/DKIM/DMARC, reputation d'indicateurs, Entra ID.",
-  "long_description": "ARGUS expose la telemetrie de securite comme outils executables par un agent. 36 outils fonctionnent SANS AUCUNE CLE d'API : vulnerabilites (NVD, catalogue CISA des failles activement exploitees, probabilite d'exploitation EPSS), MITRE ATT&CK avec son corpus embarque — donc utilisable hors ligne —, ingenierie de detection (extraction d'indicateurs, analyse et conversion de regles Sigma, couverture ATT&CK) egalement hors ligne, inspection TLS par connexion directe, hygiene DNS (DNSSEC, CAA, alias pendants), en-tetes de securite, transparence des certificats, et posture de messagerie SPF/DKIM/DMARC. 10 outils supplementaires s'activent si vous fournissez vos propres cles VirusTotal, AbuseIPDB ou un tenant Microsoft Entra.\n\nCe n'est pas un relais d'API. Les notes CVSS sont RECALCULEES localement a partir du vecteur et confrontees a 138 vecteurs reels du NVD ; le classement des vulnerabilites est deterministe et par paliers ; l'inspection TLS ouvre sa propre connexion, ce qui fonctionne aussi sur un hote interne. Tous les outils sont en LECTURE SEULE : rien n'est jamais modifie.",
+  "description": "57 outils SecOps en lecture seule : CVE/KEV/EPSS, MITRE ATT&CK hors ligne, regles Sigma et indicateurs, TLS, DNS, SPF/DKIM/DMARC, reputation d'indicateurs, Entra ID.",
+  "long_description": "ARGUS expose la telemetrie de securite comme outils executables par un agent. 47 outils fonctionnent SANS AUCUNE CLE d'API : vulnerabilites (NVD, catalogue CISA des failles activement exploitees, probabilite d'exploitation EPSS), MITRE ATT&CK avec son corpus embarque — donc utilisable hors ligne —, ingenierie de detection (extraction d'indicateurs, analyse et conversion de regles Sigma, couverture ATT&CK) egalement hors ligne, inspection TLS par connexion directe, hygiene DNS (DNSSEC, CAA, alias pendants), en-tetes de securite, transparence des certificats, et posture de messagerie SPF/DKIM/DMARC. 10 outils supplementaires s'activent si vous fournissez vos propres cles VirusTotal, AbuseIPDB ou un tenant Microsoft Entra.\n\nCe n'est pas un relais d'API. Les notes CVSS sont RECALCULEES localement a partir du vecteur et confrontees a 138 vecteurs reels du NVD ; le classement des vulnerabilites est deterministe et par paliers ; l'inspection TLS ouvre sa propre connexion, ce qui fonctionne aussi sur un hote interne. Tous les outils sont en LECTURE SEULE : rien n'est jamais modifie.",
   "author": {
     "name": "Sultan Zeineddine",
     "url": "https://github.com/Sultan-zd"
@@ -59,7 +59,7 @@
     "virustotal_api_key": {
       "type": "string",
       "title": "Cle VirusTotal (facultatif)",
-      "description": "Active les outils de reputation d'indicateurs. Le palier gratuit suffit. Sans cle, les 36 autres outils fonctionnent.",
+      "description": "Active les outils de reputation d'indicateurs. Le palier gratuit suffit. Sans cle, les 47 autres outils fonctionnent.",
       "sensitive": true,
       "required": false
     },
@@ -141,6 +141,14 @@
       "description": "État du catalogue CISA des vulnérabilités activement exploitées."
     },
     {
+      "name": "lookup_cwe",
+      "description": "Fiche complète d'une faiblesse CWE : conséquences, détection, mitigations."
+    },
+    {
+      "name": "search_cwe",
+      "description": "Cherche dans le catalogue CWE par mots-clés."
+    },
+    {
       "name": "check_web_exposure",
       "description": "Audit complet d'un domaine : TLS, en-têtes, hygiène DNS, sous-domaines."
     },
@@ -163,6 +171,14 @@
     {
       "name": "find_subdomains",
       "description": "Découvre les sous-domaines via les journaux de transparence des certificats."
+    },
+    {
+      "name": "lookup_domain_registration",
+      "description": "Depuis quand ce domaine existe, et qui l'a enregistré."
+    },
+    {
+      "name": "lookup_ip_owner",
+      "description": "À qui appartient cette adresse, et quel opérateur l'annonce."
     },
     {
       "name": "check_domain_posture",
@@ -221,6 +237,10 @@
       "description": "Version et contenu du corpus ATT&CK embarqué."
     },
     {
+      "name": "suggest_countermeasures",
+      "description": "Contre-mesures MITRE D3FEND pour une technique ATT&CK."
+    },
+    {
       "name": "parse_cvss",
       "description": "Décode un vecteur CVSS et **recalcule** la note, sans rien interroger."
     },
@@ -251,6 +271,30 @@
     {
       "name": "suggest_detection_for_technique",
       "description": "Par où commencer pour détecter une technique : journaux, signaux, squelette Sigma."
+    },
+    {
+      "name": "analyze_yara_rule",
+      "description": "Analyse une règle YARA : conformité, qualité, et rattachement à ATT&CK."
+    },
+    {
+      "name": "lookup_windows_event",
+      "description": "Identifie un ID d'événement Windows : audit de sécurité natif, et/ou Sysmon."
+    },
+    {
+      "name": "search_windows_events",
+      "description": "Cherche des événements Windows par mot-clé, dans l'audit de sécurité et/ou Sysmon."
+    },
+    {
+      "name": "check_redos",
+      "description": "Repère un motif vulnérable au ReDoS, et le CONFIRME par une exécution chronométrée réelle."
+    },
+    {
+      "name": "analyze_jwt",
+      "description": "Décode un jeton JWT et signale ce qui cloche — sans vérifier la signature."
+    },
+    {
+      "name": "decode_payload",
+      "description": "Retire les couches d'encodage d'une charge obfusquée, et dit lesquelles."
     },
     {
       "name": "enrich_ip",

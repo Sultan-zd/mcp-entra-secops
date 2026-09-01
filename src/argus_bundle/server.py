@@ -1,11 +1,11 @@
-"""Serveur unique regroupant les sept domaines d'ARGUS.
+"""Serveur unique regroupant les huit domaines d'ARGUS.
 
-**Pourquoi ce serveur existe.** Les sept serveurs restent la bonne architecture
+**Pourquoi ce serveur existe.** Les huit serveurs restent la bonne architecture
 pour un poste d'analyste : le secret Entra et la clé VirusTotal ne vivent pas
 dans le même processus, et on ne lance que ce dont on a besoin.
 
 Mais pour **distribuer** — à une équipe SOC, sous forme d'un fichier unique —
-sept déclarations à recopier à la main sont sept occasions de se tromper. Ce
+huit déclarations à recopier à la main sont huit occasions de se tromper. Ce
 module réunit donc les mêmes outils, sans les réécrire, dans un seul serveur.
 
 Le compromis est assumé et il porte sur le cloisonnement : ici, toutes les
@@ -57,12 +57,13 @@ INSTRUCTIONS = """\
 ARGUS — plateforme SecOps. Tous les outils sont en LECTURE SEULE : rien n'est
 jamais modifié, ni sur un tenant, ni sur un domaine, ni sur un hôte.
 
-SEPT DOMAINES
+HUIT DOMAINES
 
   Vulnérabilités   CVE, catalogue CISA des failles exploitées, probabilité EPSS
   MITRE ATT&CK     techniques, détections, correspondances — SANS RÉSEAU
   Détection        indicateurs, règles Sigma, couverture — SANS RÉSEAU
-  Web et TLS       certificats, en-têtes, hygiène DNS, sous-domaines
+  Artefacts        jetons JWT, charges obfusquées — SANS RÉSEAU
+  Web et TLS       certificats, en-têtes, DNS, sous-domaines, RDAP/ASN
   Messagerie       SPF, DKIM, DMARC, en-têtes de message
   Renseignement    réputation d'IP, domaines, empreintes de fichiers
   Identité         connexions Entra ID, comptes à risque, audits d'annuaire
@@ -77,6 +78,8 @@ LES OUTILS QUI RÉPONDENT AUX VRAIES QUESTIONS
   « Que retenir de ce rapport ? »       → extract_iocs
   « Cette règle est-elle bonne ? »      → analyze_sigma_rule
   « Où sont nos angles morts ? »        → check_detection_coverage
+  « Que contient ce jeton ? »           → analyze_jwt
+  « Ce domaine est-il tout neuf ? »     → lookup_domain_registration
 
 CE QUI EST FIABLE ET REPRODUCTIBLE
 
@@ -150,6 +153,7 @@ def domaines_actifs() -> dict[str, bool]:
         "vulnerabilites": True,
         "mitre": True,
         "detection": True,
+        "artefacts": True,
         "web": True,
         "messagerie": True,
         "renseignement": _clefs_renseignement(),
@@ -238,6 +242,7 @@ def build_server(
     Le SDK refuse l'un sans l'autre ; les deux sont donc transmis ensemble ou
     pas du tout.
     """
+    from artefact_mcp import tools as t_art
     from detection_mcp import tools as t_det
     from email_security_mcp import tools as t_mail
     from mitre_mcp import tools as t_mitre
@@ -267,12 +272,16 @@ def build_server(
             t_vuln.bulk_lookup_cve,
             t_vuln.get_epss,
             t_vuln.kev_catalog_stats,
+            t_vuln.lookup_cwe,
+            t_vuln.search_cwe,
             t_web.check_web_exposure,
             t_web.check_tls,
             t_web.check_certificate_expiry,
             t_web.check_security_headers,
             t_web.check_dns_hygiene,
             t_web.find_subdomains,
+            t_web.lookup_domain_registration,
+            t_web.lookup_ip_owner,
             t_mail.check_domain_posture,
             t_mail.check_spf,
             t_mail.check_dkim,
@@ -295,6 +304,7 @@ def build_server(
             t_mitre.build_navigator_layer,
             t_mitre.list_known_findings,
             t_mitre.corpus_info,
+            t_mitre.suggest_countermeasures,
             t_vuln.parse_cvss,
             t_det.extract_iocs,
             t_det.defang_iocs,
@@ -303,6 +313,12 @@ def build_server(
             t_det.convert_sigma_rule,
             t_det.check_detection_coverage,
             t_det.suggest_detection_for_technique,
+            t_det.analyze_yara_rule,
+            t_det.lookup_windows_event,
+            t_det.search_windows_events,
+            t_det.check_redos,
+            t_art.analyze_jwt,
+            t_art.decode_payload,
         ),
     )
 

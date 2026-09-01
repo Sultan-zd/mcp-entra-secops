@@ -38,6 +38,7 @@ def _run_check() -> int:
         "vulnerabilites": "Vulnérabilités (CVE, KEV, EPSS)",
         "mitre": "MITRE ATT&CK (hors ligne)",
         "detection": "Détection (IOC, Sigma — hors ligne)",
+        "artefacts": "Artefacts (JWT, décodage — hors ligne)",
         "web": "Web et TLS",
         "messagerie": "Messagerie (SPF, DKIM, DMARC)",
         "renseignement": "Renseignement sur les menaces",

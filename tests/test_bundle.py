@@ -147,7 +147,7 @@ def test_le_mode_demonstration_active_l_identite_sans_secret(
 # --------------------------------------------------------------------------
 # Composition du serveur
 # --------------------------------------------------------------------------
-async def test_le_serveur_expose_36_outils_sans_aucune_cle(
+async def test_le_serveur_expose_47_outils_sans_aucune_cle(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """C'est la promesse faite dans le manifeste du paquet."""
@@ -165,20 +165,22 @@ async def test_le_serveur_expose_36_outils_sans_aucune_cle(
 
     outils = await build_server().list_tools()
 
-    assert len(outils) == 36
+    assert len(outils) == 47
     noms = {t.name for t in outils}
     assert "prioritize_cves" in noms
     assert "map_findings_to_attack" in noms
     assert "check_web_exposure" in noms
     assert "analyze_sigma_rule" in noms
     assert "extract_iocs" in noms
+    assert "analyze_jwt" in noms
+    assert "lookup_domain_registration" in noms
     # Aucun outil exigeant une clé ne doit apparaître : un outil visible qui
     # répond toujours « clé absente » gaspille le contexte du modèle.
     assert "enrich_ip" not in noms
     assert "get_user_signins" not in noms
 
 
-async def test_toutes_les_cles_exposent_46_outils(monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_toutes_les_cles_exposent_57_outils(monkeypatch: pytest.MonkeyPatch) -> None:
     from argus_bundle.server import build_server
 
     monkeypatch.setenv("VIRUSTOTAL_API_KEY", "cle")
@@ -187,14 +189,14 @@ async def test_toutes_les_cles_exposent_46_outils(monkeypatch: pytest.MonkeyPatc
 
     outils = await build_server().list_tools()
 
-    assert len(outils) == 46
+    assert len(outils) == 57
     noms = {t.name for t in outils}
     assert "enrich_ip" in noms
     assert "get_user_signins" in noms
 
 
 async def test_aucun_nom_d_outil_n_est_en_double(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Sept serveurs réunis : une collision de noms rendrait un outil inatteignable."""
+    """Huit serveurs réunis : une collision de noms rendrait un outil inatteignable."""
     from argus_bundle.server import build_server
 
     monkeypatch.setenv("VIRUSTOTAL_API_KEY", "cle")
