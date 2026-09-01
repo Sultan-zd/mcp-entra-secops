@@ -79,6 +79,7 @@ class Corpus:
     """Le corpus indexé, prêt à interroger."""
 
     version: str
+    distilled_at: str | None
     techniques: dict[str, dict[str, Any]]
     tactics: dict[str, dict[str, Any]]
     mitigations: dict[str, dict[str, Any]]
@@ -134,6 +135,7 @@ def charger() -> Corpus:
 
     return Corpus(
         version=brut.get("attack_version", "inconnue"),
+        distilled_at=brut.get("distilled_at"),
         techniques=_index(brut.get("techniques", [])),
         tactics={t["shortname"]: t for t in brut.get("tactics", []) if t.get("shortname")},
         mitigations=_index(brut.get("mitigations", [])),

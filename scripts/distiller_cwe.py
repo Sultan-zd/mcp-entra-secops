@@ -26,6 +26,10 @@ import json
 import sys
 import urllib.request
 import zipfile
+
+# Aliasé : `distiller()` a une variable locale `date` (celle publiée par
+# MITRE) qui masquerait l'import.
+from datetime import date as _date
 from pathlib import Path
 from xml.etree import ElementTree as ET
 
@@ -168,7 +172,17 @@ def distiller(xml: bytes) -> dict[str, object]:
             "mapping_rationale": raison,
         }
 
-    return {"version": version, "date": date, "count": len(faiblesses), "weaknesses": faiblesses}
+    return {
+        "source": SOURCE,
+        "version": version,
+        "date": date,
+        # La date ci-dessus est celle de MITRE ; celle-ci est celle de NOTRE
+        # instantané. Les deux diffèrent, et c'est la seconde qui dit depuis
+        # quand ce fichier ne bouge plus.
+        "distilled_at": _date.today().isoformat(),
+        "count": len(faiblesses),
+        "weaknesses": faiblesses,
+    }
 
 
 def main() -> None:

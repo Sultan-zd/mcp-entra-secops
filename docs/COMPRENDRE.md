@@ -33,7 +33,7 @@ la fin.
 > plus à se connecter ? », et obtenir en quelques secondes un dossier d'enquête
 > fondé sur les vraies données de l'entreprise.**
 
-Un fichier de 941 Ko. Aucune ligne de commande, aucun dépôt à cloner. Le
+Un fichier de 945 Ko. Aucune ligne de commande, aucun dépôt à cloner. Le
 destinataire installe `uv` une fois, double-clique, et **47 des 57 outils
 fonctionnent immédiatement, sans aucune clé d'API**.
 
@@ -557,15 +557,37 @@ signalé. Raisonner — modifiez une métrique et rappelez l'outil pour voir l'e
 L'implémentation est confrontée à **138 vecteurs réels du NVD** avec leur note
 officielle, hors ligne, à chaque exécution des tests. Zéro écart.
 
-### 5.9 · Le référentiel ATT&CK est embarqué, pas interrogé
+### 5.9 · Les référentiels sont embarqués — et ils disent leur âge
 
-Le corpus officiel pèse 51 Mo et change quatre fois par an. Le télécharger à
-chaque démarrage coûterait plusieurs secondes, échouerait hors ligne, et
-placerait une dépendance réseau au cœur d'outils qui n'en ont aucun besoin.
+Quatre référentiels officiels sont distillés à la construction plutôt
+qu'interrogés à chaque appel : ATT&CK (51 Mo réduits à 1,8 Mo), CWE (18 Mo de
+XML réduits à 1,3 Mo), D3FEND, et les événements Windows/Sysmon. Les
+télécharger au démarrage coûterait plusieurs secondes, échouerait hors ligne,
+et placerait une dépendance réseau au cœur d'outils qui n'en ont aucun besoin.
 
-Il est donc **distillé à 1,8 Mo et versionné avec le code**. Conséquence : ces
-neuf outils fonctionnent sur un poste sans Internet, et leurs réponses ne
-varient pas d'un appel à l'autre.
+Conséquence : **vingt-quatre outils fonctionnent sur un poste sans Internet**,
+et leurs réponses ne varient pas d'un appel à l'autre.
+
+**Le défaut que ce choix créait.** Un corpus figé ne vieillit pas
+bruyamment : il répond avec exactement la même assurance à six jours qu'à
+seize mois. Rien ne distinguait « cette technique n'existe pas dans ATT&CK »
+de « n'existait pas encore lors de la construction ». C'était la seule chose
+du projet qui **contredisait son propre principe** — vérifier plutôt
+qu'affirmer.
+
+Chaque corpus porte donc désormais sa date de distillation, et deux
+garde-fous complémentaires la surveillent :
+
+| Garde-fou | Question posée | Quand |
+|---|---|---|
+| `corpus_info` | *Depuis quand ces données sont-elles figées ?* | À la demande, et un test échoue si un corpus livré dépasse le seuil |
+| `scripts/verifier_corpus.py` | *La source a-t-elle publié autre chose depuis ?* | Tous les mois, en CI |
+
+Les deux ne se remplacent pas : un corpus vieux de trois mois dont la source
+n'a pas bougé est parfaitement bon, et un corpus d'hier peut déjà être en
+retard d'une publication. Les seuils suivent le rythme réel des sources — CWE
+change deux à quatre fois par an, ATT&CK publie par semestre — et non une
+intuition.
 
 ### 5.10 · L'inspection TLS ouvre sa propre connexion
 
@@ -1173,7 +1195,8 @@ mcp-entra-secops/
 │   ├── distiller_attack.py         ATT&CK
 │   ├── distiller_cwe.py            CWE et aptitude au mapping
 │   ├── distiller_d3fend.py         contre-mesures D3FEND
-│   └── distiller_windows_events.py événements Windows + Sysmon
+│   ├── distiller_windows_events.py événements Windows + Sysmon
+│   └── verifier_corpus.py       ★ la source a-t-elle changé depuis ?
 ├── tests/
 │   └── test_frontiere_paquet.py ★ interdit à src/ d'importer atelier/
 ├── docs/

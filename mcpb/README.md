@@ -57,7 +57,7 @@ scripts qui pointent vers des chemins inexistants chez lui.
 Le format MCPB accepte deux façons de livrer un serveur Python. Embarquer les
 dépendances donnerait un paquet **par plateforme et par version de Python** —
 `cryptography` et `pydantic-core` sont compilés. Avec `uv`, un seul fichier de
-941 Ko fonctionne sur Windows, macOS et Linux.
+945 Ko fonctionne sur Windows, macOS et Linux.
 
 Le prix : le destinataire installe `uv` une fois. Voir
 [`../docs/INSTALLER.md`](../docs/INSTALLER.md).

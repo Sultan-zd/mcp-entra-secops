@@ -41,6 +41,7 @@ class Correspondances:
     """Les correspondances D3FEND embarquées, prêtes à interroger."""
 
     framework: str
+    distilled_at: str | None
     techniques: dict[str, list[dict[str, str]]]
     countermeasures: dict[str, dict[str, str | None]]
 
@@ -60,6 +61,7 @@ def charger() -> Correspondances:
 
     return Correspondances(
         framework=str(donnees.get("framework", "?")),
+        distilled_at=donnees.get("distilled_at"),
         techniques=donnees.get("techniques", {}),
         countermeasures=donnees.get("countermeasures", {}),
     )

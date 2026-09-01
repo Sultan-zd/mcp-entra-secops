@@ -135,8 +135,27 @@ class NavigatorLayer(BaseModel):
     layer_json: str = Field(description="À coller dans un fichier .json et à importer.")
 
 
+class EmbeddedDataset(BaseModel):
+    """Un référentiel figé dans le paquet, avec son âge et son verdict."""
+
+    name: str
+    distilled_at: str | None = Field(
+        default=None, description="Date de NOTRE instantané, pas celle publiée par la source."
+    )
+    source_version: str | None = Field(
+        default=None, description="Version publiée par la source, quand elle en publie une."
+    )
+    age_days: int | None = None
+    stale: bool = Field(
+        description="Vrai si l'âge dépasse le rythme de publication de la source, ou si "
+        "la date est absente. Une réponse vide peut alors venir de l'âge du corpus, "
+        "pas de la question posée."
+    )
+    note: str
+
+
 class CorpusInfo(BaseModel):
-    """État du corpus embarqué."""
+    """État des référentiels embarqués : contenu, et surtout âge."""
 
     attack_version: str
     techniques: int
@@ -145,6 +164,14 @@ class CorpusInfo(BaseModel):
     groups: int
     revoked_techniques: int
     offline: bool = Field(description="Vrai : ces outils n'accèdent jamais au réseau.")
+    datasets: list[EmbeddedDataset] = Field(
+        default_factory=list,
+        description="Les quatre référentiels embarqués du paquet, chacun daté.",
+    )
+    stale_datasets: list[str] = Field(
+        default_factory=list,
+        description="Ceux dont l'âge impose de relativiser les réponses. Vide = tous à jour.",
+    )
     note: str
 
 

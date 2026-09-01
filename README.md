@@ -1002,7 +1002,7 @@ python mcpb/outils/construire.py    # extension, construite ET vérifiée
 | Tests | 939, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
-| Distribution | extension `.mcpb` de 941 Ko — construite, **dépaquetée et exécutée** par la CI |
+| Distribution | extension `.mcpb` de 945 Ko — construite, **dépaquetée et exécutée** par la CI |
 | Transports | stdio (défaut, surface réseau nulle) et Streamable HTTP — jeton et TLS exigés hors de la machine |
 | Version | une seule, `argus_net.VERSION`, vérifiée dans le projet, le paquet et chaque serveur |
 

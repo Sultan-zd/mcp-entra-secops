@@ -49,6 +49,7 @@ class Catalogue:
 
     version: str
     date: str
+    distilled_at: str | None
     weaknesses: dict[str, dict[str, Any]]
 
     def faiblesse(self, identifiant: str) -> dict[str, Any] | None:
@@ -79,6 +80,7 @@ def charger() -> Catalogue:
     return Catalogue(
         version=str(donnees.get("version", "?")),
         date=str(donnees.get("date", "?")),
+        distilled_at=donnees.get("distilled_at"),
         weaknesses=donnees.get("weaknesses", {}),
     )
 

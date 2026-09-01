@@ -39,6 +39,7 @@ class WindowsEventsError(RuntimeError):
 class Catalogue:
     """La référence indexée, prête à interroger."""
 
+    distilled_at: str | None
     securite: list[dict[str, Any]]
     sysmon: list[dict[str, Any]]
     index_courant: dict[str, list[dict[str, Any]]]
@@ -83,6 +84,7 @@ def charger() -> Catalogue:
     index_sysmon = {int(e["id"]): e for e in sysmon}
 
     return Catalogue(
+        distilled_at=donnees.get("distilled_at"),
         securite=securite,
         sysmon=sysmon,
         index_courant=index_courant,

@@ -441,10 +441,10 @@ python mcpb/outils/construire.py
 2 · Générer le manifeste
   ✓ 57 outils déclarés par le serveur lui-même
 3 · Empaqueter
-  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (941 Ko)
+  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (945 Ko)
 4 · Vérifier l'artefact
   ✓ exécuté depuis une copie dépaquetée — 47 outils exposés.
-  ✓ 129 fichiers, aucun artefact de construction embarqué
+  ✓ 130 fichiers, aucun artefact de construction embarqué
 ```
 
 La quatrième étape est celle qui compte : empaqueter réussit même quand le

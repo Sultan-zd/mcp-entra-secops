@@ -20,6 +20,7 @@ from __future__ import annotations
 import json
 import sys
 import urllib.request
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -257,6 +258,10 @@ def distiller(paquet: dict[str, Any]) -> dict[str, Any]:
         "source": "MITRE ATT&CK Enterprise, paquet STIX officiel",
         "attack_version": version,
         "distilled_by": "scripts/distiller_attack.py",
+        # Sans cette date, un corpus figé répond avec la même assurance à six
+        # jours qu'à seize mois : rien ne distingue « n'existe pas dans
+        # ATT&CK » de « n'existait pas encore à la construction ».
+        "distilled_at": date.today().isoformat(),
         "counts": {
             "techniques": len(techniques),
             "tactics": len(tactiques),

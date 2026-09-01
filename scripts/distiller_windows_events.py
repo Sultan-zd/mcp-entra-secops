@@ -25,6 +25,7 @@ from __future__ import annotations
 import json
 import re
 import urllib.request
+from datetime import date
 from pathlib import Path
 
 SOURCE_SECURITE = (
@@ -120,6 +121,9 @@ def main() -> None:
         raise SystemExit(f"Liste Sysmon anormalement courte : {len(sysmon)} entrées.")
 
     resultat = {
+        # Aucune des deux sources ne publie de numéro de version : cette date
+        # est le seul repère sur l'âge de ces deux références.
+        "distilled_at": date.today().isoformat(),
         "security": {
             "source": (
                 "Microsoft Learn — Appendix L: Events to Monitor "

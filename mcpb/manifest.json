@@ -234,7 +234,7 @@
     },
     {
       "name": "corpus_info",
-      "description": "Version et contenu du corpus ATT&CK embarqué."
+      "description": "Contenu ET ÂGE des quatre référentiels embarqués dans le paquet."
     },
     {
       "name": "suggest_countermeasures",

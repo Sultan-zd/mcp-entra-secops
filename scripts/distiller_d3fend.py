@@ -26,6 +26,7 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -145,6 +146,10 @@ async def distiller() -> dict[str, Any]:
 
     return {
         "framework": FRAMEWORK,
+        "source": MAPPINGS_URL,
+        # D3FEND ne publie pas de numéro de version exploitable : cette date
+        # est le seul repère disponible sur l'âge de ces correspondances.
+        "distilled_at": date.today().isoformat(),
         "technique_count": len(par_technique),
         "countermeasure_count": len(countermeasures),
         "techniques": par_technique,

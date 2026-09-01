@@ -1,0 +1,60 @@
+name: Fraicheur des corpus
+
+# Les quatre referentiels officiels (ATT&CK, CWE, D3FEND, evenements Windows)
+# sont figes dans le paquet a la construction. C'est ce qui rend vingt-quatre
+# outils utilisables hors ligne — et c'est le seul endroit du projet ou la
+# qualite se degrade toute seule, sans que rien ne le signale.
+#
+# Deux garde-fous complementaires, et aucun ne remplace l'autre :
+#
+#   · L'AGE — verifie a chaque execution du CI par
+#     tests/test_fraicheur.py::test_les_corpus_livres_sont_a_jour, qui echoue
+#     des qu'un corpus depasse le rythme de publication de sa source.
+#   · LA DIVERGENCE — verifiee ici, tous les mois : la source a-t-elle publie
+#     autre chose depuis notre instantane ? Un corpus vieux de trois mois dont
+#     la source n'a pas bouge reste parfaitement bon ; un corpus d'hier peut
+#     deja etre en retard d'une publication.
+
+on:
+  schedule:
+    # Le 1er de chaque mois a 06h00 UTC. Les sources publient a l'echelle du
+    # trimestre : verifier plus souvent telechargerait 53 Mo pour rien.
+    - cron: "0 6 1 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verifier:
+    name: Les corpus correspondent-ils encore a leur source ?
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Installer le projet
+        run: pip install -e ".[dev]"
+
+      - name: Relancer les distillateurs et comparer
+        # Sort en code 1 des qu'un corpus a diverge. La comparaison ignore le
+        # champ `distilled_at`, sans quoi elle echouerait a chaque execution
+        # pour la seule raison que la date du jour a change.
+        run: python scripts/verifier_corpus.py
+
+      - name: Conserver les corpus regeneres qui ont diverge
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: corpus-regeneres
+          path: |
+            src/mitre_mcp/fixtures/attack.json
+            src/mitre_mcp/fixtures/d3fend.json
+            src/vuln_intel_mcp/fixtures/cwe.json
+            src/detection_mcp/fixtures/windows_events.json
+          if-no-files-found: ignore

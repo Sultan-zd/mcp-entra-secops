@@ -9,6 +9,7 @@ relayer.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Annotated, Any
 
 from pydantic import Field
@@ -22,6 +23,7 @@ from .models import (
     CoverageReport,
     D3fendCountermeasure,
     D3fendSuggestion,
+    EmbeddedDataset,
     GroupProfile,
     MappedFinding,
     NavigatorLayer,
@@ -480,14 +482,115 @@ async def build_navigator_layer(
     )
 
 
-async def corpus_info() -> CorpusInfo:
-    """Version et contenu du corpus ATT&CK embarqué.
+def _fraicheur_des_corpus() -> list[EmbeddedDataset]:
+    """L'âge des quatre référentiels embarqués du paquet.
 
-    À consulter avant de se fier à une réponse : un corpus figé au moment de la
-    construction est un compromis assumé — il rend le serveur utilisable hors
-    ligne, au prix d'un décalage possible avec la dernière version publiée.
+    Les imports sont locaux à dessein : ces corpus vivent dans trois paquets
+    différents, et un import de tête créerait un cycle avec `detection_mcp`,
+    qui importe déjà `mitre_mcp.corpus`.
+
+    Un corpus absent ou illisible est **rendu comme tel**, pas omis : une liste
+    plus courte laisserait croire que le paquet n'embarque que trois
+    référentiels.
+    """
+    from argus_net import evaluer_fraicheur
+
+    from .corpus import charger as charger_attack
+    from .d3fend import charger as charger_d3fend
+
+    releves: list[EmbeddedDataset] = []
+
+    def _relever(
+        nom: str, lecture: Callable[[], tuple[str | None, str | None]], script: str
+    ) -> None:
+        try:
+            distille, version = lecture()
+        except Exception as exc:
+            releves.append(
+                EmbeddedDataset(
+                    name=nom,
+                    stale=True,
+                    note=f"{nom} n'a pas pu être chargé ({exc}). Régénérer avec « {script} ».",
+                )
+            )
+            return
+        f = evaluer_fraicheur(nom, distille, version, regenerer_avec=script)
+        releves.append(
+            EmbeddedDataset(
+                name=f.name,
+                distilled_at=f.distilled_at,
+                source_version=f.source_version,
+                age_days=f.age_days,
+                stale=f.stale,
+                note=f.note,
+            )
+        )
+
+    _relever(
+        "MITRE ATT&CK",
+        lambda: (charger_attack().distilled_at, charger_attack().version),
+        "python scripts/distiller_attack.py",
+    )
+    _relever(
+        "MITRE D3FEND",
+        lambda: (charger_d3fend().distilled_at, None),
+        "python scripts/distiller_d3fend.py",
+    )
+
+    def _cwe() -> tuple[str | None, str | None]:
+        from vuln_intel_mcp.weaknesses import charger as charger_cwe
+
+        c = charger_cwe()
+        return c.distilled_at, c.version
+
+    def _windows() -> tuple[str | None, str | None]:
+        from detection_mcp.windows_events import charger as charger_windows
+
+        return charger_windows().distilled_at, None
+
+    _relever("CWE", _cwe, "python scripts/distiller_cwe.py")
+    _relever(
+        "Événements Windows / Sysmon",
+        _windows,
+        "python scripts/distiller_windows_events.py",
+    )
+    return releves
+
+
+async def corpus_info() -> CorpusInfo:
+    """Contenu ET ÂGE des quatre référentiels embarqués dans le paquet.
+
+    **À consulter avant de se fier à une absence de résultat.** Les corpus sont
+    figés au moment de la construction : c'est ce qui rend vingt-quatre outils
+    utilisables hors ligne, et c'est un compromis assumé. Mais un corpus figé
+    ne vieillit pas bruyamment — il répond avec la même assurance à six jours
+    qu'à seize mois.
+
+    Cet outil est le seul endroit qui dise depuis quand chaque référentiel ne
+    bouge plus. Si `stale_datasets` n'est pas vide, alors « cette technique
+    n'existe pas dans ATT&CK » peut vouloir dire « n'existait pas encore lors
+    de la construction » : signalez-le plutôt que de conclure à une faute de
+    frappe.
+
+    Les seuils suivent le rythme de publication réel des sources — le catalogue
+    CWE change deux à quatre fois par an, ATT&CK publie par semestre.
     """
     corpus = charger()
+    datasets = _fraicheur_des_corpus()
+    perimes = [d.name for d in datasets if d.stale]
+
+    if perimes:
+        note = (
+            "Corpus embarqués : aucun appel réseau. "
+            f"{len(perimes)} référentiel(s) à régénérer — "
+            "relativiser les absences de résultat en conséquence."
+        )
+    else:
+        note = (
+            "Corpus embarqués : aucun appel réseau, et tous distillés assez "
+            "récemment pour représenter l'état publié."
+        )
+
     return CorpusInfo(
         attack_version=corpus.version,
         techniques=len(corpus.techniques),
@@ -496,10 +599,9 @@ async def corpus_info() -> CorpusInfo:
         groups=len(corpus.groups),
         revoked_techniques=len(corpus.revoked),
         offline=True,
-        note=(
-            "Corpus embarqué : aucun appel réseau. Régénérable avec "
-            "« python scripts/distiller_attack.py »."
-        ),
+        datasets=datasets,
+        stale_datasets=perimes,
+        note=note,
     )
 
 
