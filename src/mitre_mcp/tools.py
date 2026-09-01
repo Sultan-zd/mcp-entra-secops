@@ -13,12 +13,15 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
+from . import d3fend as d3f
 from .corpus import charger, chercher, resoudre_identifiant
 from .mapping import constats_connus, correspondances
 from .models import (
     AttackMapping,
     CorpusInfo,
     CoverageReport,
+    D3fendCountermeasure,
+    D3fendSuggestion,
     GroupProfile,
     MappedFinding,
     NavigatorLayer,
@@ -497,4 +500,59 @@ async def corpus_info() -> CorpusInfo:
             "Corpus embarqué : aucun appel réseau. Régénérable avec "
             "« python scripts/distiller_attack.py »."
         ),
+    )
+
+
+def _contremesure_en_modele(mesure: d3f.ContreMesure) -> D3fendCountermeasure:
+    return D3fendCountermeasure(
+        countermeasure=mesure.countermeasure,
+        tactic=mesure.tactic,
+        definition=mesure.definition,
+        d3fend_id=mesure.d3fend_id,
+        relationship=mesure.relationship,
+        artifact=mesure.artifact,
+    )
+
+
+async def suggest_countermeasures(
+    technique_id: Annotated[str, Field(description="Identifiant, par exemple T1566 ou T1055.")],
+) -> D3fendSuggestion:
+    """Contre-mesures MITRE D3FEND pour une technique ATT&CK.
+
+    Quoi CONSTRUIRE pour s'en défendre, pas seulement quoi surveiller.
+
+    `lookup_technique` dit *quoi surveiller* (détection). Cet outil répond à la
+    question suivante : une fois la technique identifiée, **quoi construire**
+    pour s'en défendre ? Chaque contre-mesure est nommée et classée par
+    tactique défensive — Harden, Detect, Isolate, Deceive, Evict, Model,
+    Restore — dans l'ordre où une défense se construit réellement : durcir la
+    surface avant de chercher à détecter ce qui la franchit.
+
+    **Le piège que cet outil traite explicitement.** D3FEND mappe très souvent
+    des *sous-techniques*, jamais leur technique parente : `T1055.003` a des
+    contre-mesures nommées, `T1055` seul n'en a directement aucune — alors que
+    dix de ses sous-techniques en ont. Rendre « aucune contre-mesure » pour
+    `T1055` serait un faux négatif. Cet outil retrouve donc les contre-mesures
+    des sous-techniques quand la technique demandée n'en a pas directement, et
+    le dit dans `notes` plutôt que de le laisser deviner.
+
+    Entièrement local : les correspondances D3FEND sont embarquées, aucun
+    réseau requis. Une technique sans aucune contre-mesure D3FEND connue,
+    directement ou via ses filles, le dit aussi — D3FEND ne couvre encore
+    qu'une partie du référentiel ATT&CK.
+    """
+    identifiant = resoudre_identifiant(technique_id)
+    corpus = charger()
+    sous = [t["id"] for t in corpus.sous_techniques(identifiant)]
+
+    suggestion = d3f.suggerer(identifiant, sous_techniques=sous)
+
+    return D3fendSuggestion(
+        technique_id=suggestion.technique_id,
+        countermeasures=[_contremesure_en_modele(m) for m in suggestion.countermeasures],
+        via_subtechniques={
+            sous_id: [_contremesure_en_modele(m) for m in mesures]
+            for sous_id, mesures in suggestion.via_subtechniques.items()
+        },
+        notes=suggestion.notes,
     )

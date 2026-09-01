@@ -146,3 +146,29 @@ class CorpusInfo(BaseModel):
     revoked_techniques: int
     offline: bool = Field(description="Vrai : ces outils n'accèdent jamais au réseau.")
     note: str
+
+
+class D3fendCountermeasure(BaseModel):
+    """Une contre-mesure D3FEND nommée, avec sa tactique et sa définition."""
+
+    countermeasure: str
+    tactic: str = Field(description="Model, Harden, Detect, Isolate, Deceive, Evict ou Restore.")
+    definition: str | None = None
+    d3fend_id: str | None = None
+    relationship: str | None = Field(
+        default=None, description="Le verbe D3FEND : filters, hardens, monitors…"
+    )
+    artifact: str | None = Field(default=None, description="Ce sur quoi la contre-mesure agit.")
+
+
+class D3fendSuggestion(BaseModel):
+    """Ce que D3FEND propose pour une technique ATT&CK."""
+
+    technique_id: str
+    countermeasures: list[D3fendCountermeasure] = Field(default_factory=list)
+    via_subtechniques: dict[str, list[D3fendCountermeasure]] = Field(
+        default_factory=dict,
+        description="Rempli quand la technique elle-même n'a pas de mapping direct, "
+        "mais que ses sous-techniques en ont.",
+    )
+    notes: list[str] = Field(default_factory=list)
