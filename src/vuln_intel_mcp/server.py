@@ -15,9 +15,11 @@ from .tools import (
     get_epss,
     kev_catalog_stats,
     lookup_cve,
+    lookup_cwe,
     parse_cvss,
     prioritize_cves,
     search_cve,
+    search_cwe,
 )
 
 INSTRUCTIONS = """\
@@ -42,6 +44,7 @@ Quel outil pour quelle question :
   « Quelles failles sur ce produit ? »    → search_cve ou cve_for_product
   « Que veut dire ce vecteur ? »          → parse_cvss (100 % local, hors ligne)
   « Qu'est-ce qui vient d'être exploité ? » → kev_catalog_stats
+  « Quel CWE, et ça teste quoi ? »        → lookup_cwe (100 % local, hors ligne)
 
 Deux choses que ce serveur fait et qu'un simple relais ne fait pas :
 
@@ -54,6 +57,11 @@ Sur un lot de plus de 20 CVE, prioritize_cves n'interroge pas les notes CVSS
 individuelles (quotas du NVD) : KEV et EPSS suffisent à décider de l'urgence.
 Le champ `catalog_stale` signale une réponse fondée sur un catalogue non
 rafraîchi.
+
+`lookup_cve` rend les CWE cités par NVD comme de simples identifiants ;
+`lookup_cwe` les développe. Un `mapping_warning` renseigné signale un CWE que
+MITRE lui-même déconseille d'assigner à une vulnérabilité précise — un défaut
+de la fiche NVD, pas seulement une information de plus.
 """
 
 #: Aucun outil ne modifie quoi que ce soit. `open_world_hint` signale que les
@@ -85,6 +93,9 @@ TOOLS = (
     kev_catalog_stats,
 )
 
+#: Le catalogue CWE est embarqué : pas de réseau, réponses stables.
+CWE_TOOLS = (lookup_cwe, search_cwe)
+
 
 def build_server() -> MCPServer:
     """Construit le serveur et y enregistre l'ensemble des outils."""
@@ -100,5 +111,7 @@ def build_server() -> MCPServer:
         server.tool(annotations=READ_ONLY)(tool)
 
     server.tool(annotations=PUREMENT_LOCAL)(parse_cvss)
+    for outil_local in CWE_TOOLS:
+        server.tool(annotations=PUREMENT_LOCAL)(outil_local)
 
     return server

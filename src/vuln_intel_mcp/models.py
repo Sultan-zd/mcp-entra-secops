@@ -170,3 +170,66 @@ class KevStats(BaseModel):
         default_factory=list, description="Dernières inscriptions."
     )
     catalog_stale: bool = False
+
+
+class WeaknessConsequence(BaseModel):
+    """Une paire portée/impact — ce que l'exploitation compromet."""
+
+    scope: str
+    impact: str
+
+
+class DetectionMethod(BaseModel):
+    """Une méthode susceptible de repérer cette faiblesse dans du code réel."""
+
+    method: str
+    description: str | None = None
+
+
+class WeaknessDetail(BaseModel):
+    """Une entrée du catalogue CWE, avec ce qui décide si elle s'applique."""
+
+    id: str
+    name: str
+    abstraction: str | None = Field(
+        default=None,
+        description="Pillar/Class/Base/Variant/Compound. Un Pillar ou une Class "
+        "regroupe des dizaines de faiblesses plus précises.",
+    )
+    status: str | None = None
+    description: str | None = None
+    likelihood: str | None = None
+    consequences: list[WeaknessConsequence] = Field(default_factory=list)
+    detection_methods: list[DetectionMethod] = Field(default_factory=list)
+    mitigations: list[str] = Field(default_factory=list)
+    parents: list[str] = Field(
+        default_factory=list, description="CWE plus généraux dont celui-ci est un cas particulier."
+    )
+    mapping_usage: str | None = Field(
+        default=None,
+        description="Allowed / Allowed-with-Review / Discouraged / Prohibited — "
+        "l'aptitude de ce CWE, selon MITRE, à être assigné à une vulnérabilité précise.",
+    )
+    mapping_rationale: str | None = None
+    mapping_warning: str | None = Field(
+        default=None,
+        description="Rempli quand ce CWE ne devrait probablement pas désigner une "
+        "vulnérabilité précise — à lire avant de s'appuyer sur cet identifiant.",
+    )
+
+
+class WeaknessSummary(BaseModel):
+    """Fiche courte, pour les résultats de recherche."""
+
+    id: str
+    name: str
+    abstraction: str | None = None
+    mapping_usage: str | None = None
+
+
+class WeaknessSearchResult(BaseModel):
+    """Résultat d'une recherche dans le catalogue CWE."""
+
+    query: str
+    total: int
+    results: list[WeaknessSummary] = Field(default_factory=list)

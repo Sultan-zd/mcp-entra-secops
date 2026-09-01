@@ -12,6 +12,7 @@ from typing import Annotated, Any, get_args
 
 from pydantic import Field
 
+from . import weaknesses as cwe
 from .cvss import CvssError, evaluer
 from .models import (
     MAX_PRODUITS,
@@ -27,6 +28,9 @@ from .models import (
     Reference,
     SearchResult,
     Severity,
+    WeaknessDetail,
+    WeaknessSearchResult,
+    WeaknessSummary,
 )
 from .prioritize import Vulnerabilite, prioriser, synthese
 from .runtime import get_sources
@@ -748,4 +752,91 @@ async def cve_for_product(
         returned=len(resultats),
         results=resultats,
         notes=notes,
+    )
+
+
+def _detail_faiblesse(brut: dict[str, Any]) -> WeaknessDetail:
+    """Assemble la fiche de sortie, et l'avertissement de mapping s'il y a lieu."""
+    evaluation = cwe.evaluer_mapping(brut["id"])
+    avertissement = " ".join(evaluation.notes) if evaluation.problematic else None
+
+    return WeaknessDetail(
+        id=brut["id"],
+        name=brut.get("name", ""),
+        abstraction=brut.get("abstraction"),
+        status=brut.get("status"),
+        description=brut.get("description"),
+        likelihood=brut.get("likelihood"),
+        consequences=brut.get("consequences", []),
+        detection_methods=brut.get("detection_methods", []),
+        mitigations=brut.get("mitigations", []),
+        parents=brut.get("parents", []),
+        mapping_usage=brut.get("mapping_usage"),
+        mapping_rationale=brut.get("mapping_rationale"),
+        mapping_warning=avertissement,
+    )
+
+
+async def lookup_cwe(
+    cwe_id: Annotated[
+        str, Field(description="Identifiant CWE, par exemple CWE-502 ou simplement 502.")
+    ],
+) -> WeaknessDetail:
+    """Fiche complète d'une faiblesse CWE : conséquences, détection, mitigations.
+
+    Répond à ce que `lookup_cve` ne dit pas : un identifiant CWE seul ne dit ni
+    ce qu'il faut tester, ni s'il désigne vraiment une faiblesse précise.
+    Enchaînement typique : `lookup_cve` rend les CWE cités par NVD, cet outil
+    les développe un par un.
+
+    **`mapping_warning` est le champ à lire en premier s'il est renseigné.**
+    MITRE classe chaque CWE selon son aptitude à être assigné à une
+    vulnérabilité précise (`mapping_usage` : `Allowed`, `Discouraged`,
+    `Prohibited`) et selon son niveau d'abstraction (`Pillar` et `Class` sont
+    trop généraux pour dire quoi tester). Un CWE `Prohibited` cité sur une CVE
+    réelle est un défaut de la fiche NVD elle-même — cet outil le signale
+    plutôt que de rendre la définition sans commentaire.
+
+    Entièrement local : le catalogue CWE est embarqué, aucun réseau requis.
+    """
+    try:
+        catalogue = cwe.charger()
+    except cwe.CweError as exc:
+        raise ValueError(str(exc)) from None
+
+    brut = catalogue.faiblesse(cwe_id)
+    if brut is None:
+        raise ValueError(
+            f"« {cwe_id} » n'existe pas dans le catalogue CWE v{catalogue.version}."
+        )
+    return _detail_faiblesse(brut)
+
+
+async def search_cwe(
+    query: Annotated[
+        str, Field(description="Mots-clés : nature de la faiblesse, technologie, mécanisme.")
+    ],
+    limit: Annotated[int, Field(description="Nombre de résultats, 30 au plus.", ge=1, le=30)] = 10,
+) -> WeaknessSearchResult:
+    """Cherche dans le catalogue CWE par mots-clés.
+
+    À utiliser pour « quel CWE correspond à une désérialisation non
+    validée ? » avant d'avoir un identifiant en main. Entièrement local.
+    """
+    if not query.strip():
+        raise ValueError("Indiquez des mots-clés.")
+
+    resultats = cwe.chercher(query.strip(), limite=limit)
+    return WeaknessSearchResult(
+        query=query.strip(),
+        total=len(resultats),
+        results=[
+            WeaknessSummary(
+                id=r["id"],
+                name=r.get("name", ""),
+                abstraction=r.get("abstraction"),
+                mapping_usage=r.get("mapping_usage"),
+            )
+            for r in resultats
+        ],
     )
