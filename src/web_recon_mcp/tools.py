@@ -15,12 +15,14 @@ from typing import Annotated, Any
 
 from pydantic import Field
 
-from . import ct
+from . import ct, rdap
 from .dnshygiene import examiner as examiner_dns
 from .headers import analyser as analyser_entetes
 from .models import (
     CertificateInventory,
     DnsHygieneReport,
+    DomainRegistration,
+    IpOwner,
     SecurityHeadersReport,
     SubdomainReport,
     TlsReport,
@@ -277,3 +279,78 @@ async def check_web_exposure(
         else ""
     )
     return rapport
+
+
+async def lookup_domain_registration(
+    domain: Annotated[
+        str,
+        Field(description="Le domaine à interroger, par exemple « exemple.com ».", max_length=253),
+    ],
+) -> DomainRegistration:
+    """Depuis quand ce domaine existe, et qui l'a enregistré.
+
+    **L'âge d'un domaine est l'un des signaux de hameçonnage les plus forts qui
+    existent.** Une campagne consomme des domaines enregistrés depuis quelques
+    jours, parce qu'un domaine ancien coûte cher et se rachète mal. Un domaine
+    de moins de trente jours, cité dans un courriel suspect, mérite à lui seul
+    une prudence particulière.
+
+    Interroge RDAP — le successeur de WHOIS : réponses structurées, **aucune
+    clé d'API**, et une couverture qui inclut les extensions nationales.
+
+    Rend aussi les codes d'état du registre. Certains sont parlants pour un
+    incident : `clientHold` signifie que le registrar a suspendu la résolution
+    du domaine, `redemptionPeriod` qu'il a expiré et peut être racheté par un
+    tiers — ce qui transfère tout ce qui en dépend.
+
+    Un registre muet ne veut pas dire « domaine inexistant » : l'outil le dit
+    au lieu de conclure.
+    """
+    resultat = await rdap.enregistrement(domain)
+    return DomainRegistration(
+        domain=resultat.domain,
+        registered_on=resultat.registered_on,
+        expires_on=resultat.expires_on,
+        last_changed=resultat.last_changed,
+        age_days=resultat.age_days,
+        registrar=resultat.registrar,
+        nameservers=resultat.nameservers,
+        status=resultat.status,
+        dnssec=resultat.dnssec,
+        findings=resultat.findings,
+        source=resultat.source,
+    )
+
+
+async def lookup_ip_owner(
+    ip: Annotated[str, Field(description="L'adresse IP à situer.", max_length=45)],
+) -> IpOwner:
+    """À qui appartient cette adresse, et quel opérateur l'annonce.
+
+    Savoir qu'une adresse appartient à un hébergeur pare-balles plutôt qu'à un
+    fournisseur d'accès grand public change la lecture d'un incident — et
+    aucune source de réputation ne le dit.
+
+    Croise deux registres publics, **sans aucune clé** : RDAP pour
+    l'allocation (plage, organisation, type), RIPEstat pour le numéro de
+    système autonome et son détenteur.
+
+    Un préfixe **non annoncé** est signalé : l'adresse n'est alors joignable
+    par personne, ce qui rend suspecte sa présence dans un journal récent.
+
+    **Une adresse privée n'est jamais transmise.** L'interroger chez un tiers
+    révélerait la topologie du réseau interne, et aucun registre n'en dirait
+    rien.
+    """
+    resultat = await rdap.proprietaire(ip)
+    return IpOwner(
+        ip=resultat.ip,
+        network=resultat.network,
+        name=resultat.name,
+        allocation_type=resultat.allocation_type,
+        country=resultat.country,
+        asn=resultat.asn,
+        asn_holder=resultat.asn_holder,
+        announced=resultat.announced,
+        findings=resultat.findings,
+    )

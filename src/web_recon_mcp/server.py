@@ -15,6 +15,8 @@ from .tools import (
     check_tls,
     check_web_exposure,
     find_subdomains,
+    lookup_domain_registration,
+    lookup_ip_owner,
 )
 
 INSTRUCTIONS = """\
@@ -74,6 +76,8 @@ TOOLS = (
     check_security_headers,
     check_dns_hygiene,
     find_subdomains,
+    lookup_domain_registration,
+    lookup_ip_owner,
 )
 
 
