@@ -51,6 +51,7 @@ quelques secondes une réponse fondée sur les données réelles du tenant.
 | 📦 **[INSTALLER.md](docs/INSTALLER.md)** | l'analyste qui reçoit l'extension, et qui la distribue |
 | 🎓 **[COMPRENDRE.md](docs/COMPRENDRE.md)** | tout le projet expliqué depuis zéro, sans prérequis |
 | 🔧 **[SETUP.md](docs/SETUP.md)** | qui modifie le code, lance les tests, construit l'extension |
+| 🔑 **[ENTRA.md](docs/ENTRA.md)** | qui branche ARGUS sur un vrai tenant : permissions au plus juste, licences, validation |
 | 🔍 **[RESEARCH.md](docs/RESEARCH.md)** | scan du marché et choix d'exposition sécurisée |
 
 ## Installation
@@ -971,7 +972,7 @@ zone a un rapport précis au paquet :
 | `src/` | **est** le paquet — les dix paquets recopiés dedans | oui |
 | `mcpb/` | **le fabrique** — manifeste, empaquetage, signature, vérification | non |
 | `scripts/` | **produit ce qu'il embarque** — corpus ATT&CK, CWE, D3FEND, événements Windows | non, leur sortie oui |
-| `tests/` | **prouve qu'il fonctionne** — 982 tests | non |
+| `tests/` | **prouve qu'il fonctionne** — 1003 tests | non |
 | `atelier/` | **valide que ses outils s'enchaînent**, sans modèle IA | non |
 | `docs/` | **l'explique** — installer, comprendre, modifier | non |
 
@@ -1002,7 +1003,7 @@ python mcpb/outils/construire.py    # extension, construite ET vérifiée
 | Tests | 939, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
-| Distribution | extension `.mcpb` de 945 Ko — construite, **dépaquetée et exécutée** par la CI |
+| Distribution | extension `.mcpb` de 946 Ko — construite, **dépaquetée et exécutée** par la CI |
 | Transports | stdio (défaut, surface réseau nulle) et Streamable HTTP — jeton et TLS exigés hors de la machine |
 | Version | une seule, `argus_net.VERSION`, vérifiée dans le projet, le paquet et chaque serveur |
 

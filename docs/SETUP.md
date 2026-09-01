@@ -170,7 +170,7 @@ teknologiia.com   note A (100/100)  SPF 1/10 lookups · DKIM 2 clés · DMARC re
 pytest
 ```
 
-Résultat attendu : **939 tests**, tous verts, **sans aucun accès réseau ni clé
+Résultat attendu : **1003 tests**, tous verts, **sans aucun accès réseau ni clé
 d'API**. Les sources publiques sont simulées ; un test qui dépendrait de la
 disponibilité du NVD finirait par être ignoré.
 
@@ -441,7 +441,7 @@ python mcpb/outils/construire.py
 2 · Générer le manifeste
   ✓ 57 outils déclarés par le serveur lui-même
 3 · Empaqueter
-  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (945 Ko)
+  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (946 Ko)
 4 · Vérifier l'artefact
   ✓ exécuté depuis une copie dépaquetée — 47 outils exposés.
   ✓ 130 fichiers, aucun artefact de construction embarqué
@@ -479,11 +479,16 @@ Notez l'**ID d'application (client)** et l'**ID de l'annuaire (locataire)**.
 
 | Permission | Outils concernés | Licence |
 |---|---|---|
-| `AuditLog.Read.All` | `get_user_signins`, `get_directory_audits` | P1 pour les connexions |
+| `AuditLog.Read.All` | `get_user_signins`, `get_directory_audits` | P1 ou P2 pour les connexions |
 | `Directory.Read.All` | `get_user_context` | — |
-| `IdentityRiskyUser.Read.All` | `get_risky_users` | P2 |
-| `IdentityRiskEvent.Read.All` | `get_risk_detections` | P2 |
+| `IdentityRiskyUser.Read.All` | `get_risky_users` | P2 seulement |
+| `IdentityRiskEvent.Read.All` | `get_risk_detections` | P1 ou P2 |
 | `Policy.Read.All` | `get_conditional_access_policies` | — |
+
+> `Directory.Read.All` est plus large que le `User.Read.All` qui suffirait à
+> lire la fiche d'un compte : c'est `memberOf` — donc les groupes et les rôles,
+> donc la gravité d'un incident — qui l'exige. Voir [`ENTRA.md`](ENTRA.md) pour
+> ce qui se passe si vous accordez moins.
 
 Puis **Accorder le consentement administrateur**. Sans ce clic, Graph répond
 `403` et rien ne fonctionne.

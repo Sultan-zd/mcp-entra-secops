@@ -1,6 +1,6 @@
 # Installer et distribuer ARGUS
 
-ARGUS est **une extension `.mcpb`** : un fichier de 945 Ko qui donne à un modèle
+ARGUS est **une extension `.mcpb`** : un fichier de 946 Ko qui donne à un modèle
 IA 57 outils de sécurité en lecture seule.
 
 Ce document couvre les trois façons de le mettre entre les mains de quelqu'un —
@@ -50,7 +50,7 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Puis **double-cliquer sur le `.mcpb`**. Claude Desktop propose l'installation et
 affiche les champs de configuration.
 
-C'est `uv` qui permet à un seul fichier de 945 Ko de fonctionner sur Windows,
+C'est `uv` qui permet à un seul fichier de 946 Ko de fonctionner sur Windows,
 macOS et Linux : embarquer les dépendances donnerait un paquet **par plateforme
 et par version de Python**, puisque `cryptography` et `pydantic-core` sont
 compilés.
@@ -300,7 +300,7 @@ lance.
 2 · Générer le manifeste
   ✓ 57 outils déclarés par le serveur lui-même
 3 · Empaqueter
-  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (945 Ko)
+  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (946 Ko)
 4 · Vérifier l'artefact
   ✓ exécuté depuis une copie dépaquetée — 47 outils exposés.
   ✓ 130 fichiers, aucun artefact de construction embarqué

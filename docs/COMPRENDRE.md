@@ -33,7 +33,7 @@ la fin.
 > plus à se connecter ? », et obtenir en quelques secondes un dossier d'enquête
 > fondé sur les vraies données de l'entreprise.**
 
-Un fichier de 945 Ko. Aucune ligne de commande, aucun dépôt à cloner. Le
+Un fichier de 946 Ko. Aucune ligne de commande, aucun dépôt à cloner. Le
 destinataire installe `uv` une fois, double-clique, et **47 des 57 outils
 fonctionnent immédiatement, sans aucune clé d'API**.
 
@@ -197,18 +197,22 @@ système qui gère les comptes utilisateurs de l'entreprise.
 | Outil | Ce qu'il répond | Permission Microsoft | Licence |
 |---|---|---|---|
 | `get_user_context` | Qui est ce compte ? Est-il administrateur ? | `Directory.Read.All` | — |
-| `get_user_signins` | Comment s'est-il connecté ces dernières heures ? | `AuditLog.Read.All` | P1 |
-| `get_risky_users` | Quels comptes Microsoft signale-t-il à risque ? | `IdentityRiskyUser.Read.All` | P2 |
-| `get_risk_detections` | **Pourquoi** ce compte est-il à risque ? | `IdentityRiskEvent.Read.All` | P2 |
+| `get_user_signins` | Comment s'est-il connecté ces dernières heures ? | `AuditLog.Read.All` | P1 **ou** P2 |
+| `get_risky_users` | Quels comptes Microsoft signale-t-il à risque ? | `IdentityRiskyUser.Read.All` | **P2 seulement** |
+| `get_risk_detections` | **Pourquoi** ce compte est-il à risque ? | `IdentityRiskEvent.Read.All` | P1 **ou** P2 |
 | `get_directory_audits` | Qu'est-ce qui a été modifié dans l'annuaire ? | `AuditLog.Read.All` | — |
 | `get_conditional_access_policies` | Quelles règles d'accès protègent le tenant ? | `Policy.Read.All` | — |
 
-> ⚠️ **Le piège des licences.** Les colonnes P1 et P2 ne sont pas décoratives.
-> Sans licence Entra ID P1, Microsoft refuse l'accès aux journaux de connexion
-> avec une erreur `403` — la même erreur que si vous aviez oublié une
-> permission. Le projet **distingue les deux cas** dans son diagnostic, parce
-> que confondre « licence manquante » et « permission oubliée » fait perdre
-> plusieurs jours.
+> ⚠️ **Le piège des licences.** La colonne n'est pas décorative. Sans licence
+> Entra ID P1 ou P2, Microsoft refuse l'accès aux journaux de connexion par
+> l'API Graph avec une erreur `403` — la même erreur que si vous aviez oublié
+> une permission. Le projet **distingue les deux cas** dans son diagnostic,
+> parce que confondre « licence manquante » et « permission oubliée » fait
+> perdre plusieurs jours.
+>
+> Un seul outil exige strictement **P2** : `get_risky_users`. Sur un tenant
+> P1, cinq outils sur six fonctionnent. Le détail vérifié source par source
+> est dans [`ENTRA.md`](ENTRA.md).
 
 ### Serveur 2 — `threat-intel-mcp` · le renseignement sur les menaces
 
@@ -1062,7 +1066,9 @@ conçu pour échouer — qui les ont fait sortir.
 - Microsoft propose déjà `microsoft/EnterpriseMCP` et Lokka, qui couvrent Entra
   sur MCP. Le projet ne prétend pas à la nouveauté : il se positionne comme une
   **interface de télémétrie durcie**.
-- Trois outils restent bloqués faute de licence Entra ID P2.
+- Un outil (`get_risky_users`) exige strictement une licence Entra ID P2 ;
+  deux autres exigent P1 ou P2. Sur un tenant sans licence premium, trois des
+  six outils d'identité restent inaccessibles.
 - La spécification MCP `2026-07-28` **déprécie formellement SSE** comme
   transport MCP.
 
@@ -1082,7 +1088,7 @@ rapport précis à l'extension.
 | `src/` | **est** le paquet — les 10 paquets recopiés dedans | oui |
 | `mcpb/` | **le fabrique** — manifeste, empaquetage, signature, vérification | non |
 | `scripts/` | **produit ce qu'il embarque** — corpus ATT&CK, CWE, D3FEND, événements Windows | non, leur sortie oui |
-| `tests/` | **prouve qu'il fonctionne** — 982 tests | non |
+| `tests/` | **prouve qu'il fonctionne** — 1003 tests | non |
 | `atelier/` | **valide que ses outils s'enchaînent**, sans modèle IA | non |
 | `docs/` | **l'explique** — installer, comprendre, modifier | non |
 
@@ -1202,6 +1208,7 @@ mcp-entra-secops/
 ├── docs/
 │   ├── INSTALLER.md                installer, distribuer, exposer l'extension
 │   ├── SETUP.md                    travailler sur le code
+│   ├── ENTRA.md                 ★ permissions au plus juste, licences, validation
 │   ├── RESEARCH.md                 scan du marché, exposition sécurisée
 │   └── COMPRENDRE.md               ← ce document
 └── .github/workflows/ci.yml     ← lint, types, tests, évaluation, paquet, Trivy
