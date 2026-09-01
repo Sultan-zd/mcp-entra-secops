@@ -447,15 +447,18 @@ async def test_une_technique_revoquee_renvoie_sa_remplacante() -> None:
 # --------------------------------------------------------------------------
 # Composition du serveur
 # --------------------------------------------------------------------------
-async def test_le_serveur_expose_les_sept_outils() -> None:
+async def test_le_serveur_expose_les_onze_outils() -> None:
     from detection_mcp.server import build_server
 
     outils = await build_server().list_tools()
 
-    assert len(outils) == 7
+    assert len(outils) == 11
     noms = {t.name for t in outils}
     assert "extract_iocs" in noms
     assert "analyze_sigma_rule" in noms
+    assert "lookup_windows_event" in noms
+    assert "search_windows_events" in noms
+    assert "check_redos" in noms
     assert "check_detection_coverage" in noms
 
 

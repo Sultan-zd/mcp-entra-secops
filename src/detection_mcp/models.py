@@ -199,3 +199,130 @@ class DetectionAdvice(BaseModel):
         "règle prête à déployer."
     )
     notes: list[str] = Field(default_factory=list)
+
+
+class YaraString(BaseModel):
+    """Une chaîne déclarée dans le bloc `strings` d'une règle YARA."""
+
+    name: str
+    type: str = Field(description="text, regex ou byte.")
+    value: str
+    modifiers: list[str] = Field(default_factory=list)
+
+
+class YaraAnalysis(BaseModel):
+    """Une règle YARA lue, notée et rattachée à ATT&CK."""
+
+    name: str
+    tags: list[str] = Field(default_factory=list)
+    scopes: list[str] = Field(
+        default_factory=list, description="private / global, s'ils sont déclarés."
+    )
+    imports: list[str] = Field(
+        default_factory=list, description="Modules YARA utilisés (pe, elf…)."
+    )
+    metadata: dict[str, str] = Field(default_factory=dict)
+    strings: list[YaraString] = Field(default_factory=list)
+    condition: str = ""
+    spec_compliant: bool = Field(
+        description="La règle compile-t-elle avec le compilateur YARA officiel ? "
+        "Une règle non conforme est tout de même analysée et notée."
+    )
+    spec_error: str | None = Field(default=None, description="Motif du refus, le cas échéant.")
+    quality: RuleQuality
+    attack: list[LinkedTechnique] = Field(default_factory=list)
+    attack_findings: list[str] = Field(
+        default_factory=list,
+        description="Étiquettes révoquées, inexistantes ou incohérentes avec la source.",
+    )
+    attack_version: str = ""
+
+
+# --------------------------------------------------------------------------
+# Référence des événements Windows / Sysmon
+# --------------------------------------------------------------------------
+class WindowsSecurityEvent(BaseModel):
+    """Une entrée d'audit de sécurité Windows (canal `Security`)."""
+
+    current_id: str | None = Field(
+        default=None,
+        description="Identifiant moderne (Vista et ultérieur). Absent pour certains "
+        "événements retirés dont seul l'ID historique subsiste.",
+    )
+    legacy_ids: list[str] = Field(
+        default_factory=list, description="Identifiants antérieurs à Vista, le cas échéant."
+    )
+    criticality: str = Field(
+        description="Low, Medium, Medium to High ou High — jugement éditorial de Microsoft, "
+        "tenu à jour dans « Appendix L: Events to Monitor »."
+    )
+    summary: str
+
+
+class SysmonEvent(BaseModel):
+    """Une entrée du canal `Microsoft-Windows-Sysmon/Operational`.
+
+    Pas de champ de criticité : la documentation officielle Sysinternals n'en
+    publie pas pour ces IDs — l'intérêt d'un événement Sysmon dépend
+    entièrement de la configuration déployée, pas d'un jugement fixe de
+    Microsoft. En afficher une ici serait une valeur inventée.
+    """
+
+    id: int
+    name: str
+    description: str
+
+
+class WindowsEventMatches(BaseModel):
+    """Ce qu'une consultation ou une recherche a trouvé, par source."""
+
+    query: str
+    security_matches: list[WindowsSecurityEvent] = Field(default_factory=list)
+    sysmon_matches: list[SysmonEvent] = Field(default_factory=list)
+    note: str | None = None
+
+
+# --------------------------------------------------------------------------
+# ReDoS
+# --------------------------------------------------------------------------
+class RedosFinding(BaseModel):
+    """Une forme structurellement suspecte, confrontée à une exécution réelle."""
+
+    kind: str = Field(
+        description="quantificateurs_imbriques, alternance_ambigue ou "
+        "quantificateurs_adjacents."
+    )
+    sample: str = Field(description="Le caractère utilisé pour construire l'attaque de test.")
+    explanation: str
+    confirmed: bool = Field(
+        description="La mesure chronométrée réelle confirme-t-elle un ralentissement "
+        "anormal — pas seulement la forme du motif."
+    )
+    timeout_hit: bool = Field(
+        description="Le moteur n'a pas terminé dans le budget imparti : la confirmation "
+        "la plus forte possible."
+    )
+    timings_ms: list[list[float]] = Field(
+        default_factory=list,
+        description="Paires [longueur, durée en ms] mesurées, croissantes.",
+    )
+    note: str
+
+
+class RedosAnalysis(BaseModel):
+    """Le verdict sur un motif : candidats structurels, puis confirmation empirique."""
+
+    pattern: str
+    compiles: bool = Field(description="Le motif compile-t-il dans le moteur `re` de Python ?")
+    compile_error: str | None = None
+    findings: list[RedosFinding] = Field(default_factory=list)
+    vulnerable: bool = Field(
+        description="Au moins un constat a été confirmé par une exécution réelle — "
+        "pas seulement repéré dans le texte."
+    )
+    truncated: bool = Field(
+        default=False,
+        description="D'autres candidats structurels existaient mais n'ont pas été "
+        "confirmés empiriquement, pour borner le temps de réponse.",
+    )
+    note: str
