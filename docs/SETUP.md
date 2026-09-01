@@ -7,7 +7,7 @@
 > Ce guide-ci s'adresse à qui modifie le code, lance les tests, ou construit
 > l'extension.
 
-Le contenu de l'extension, ce sont **sept serveurs MCP**. Cinq d'entre eux ne
+Le contenu de l'extension, ce sont **huit serveurs MCP**. Six d'entre eux ne
 demandent **aucune clé d'API** : vous pouvez les essayer dans la minute qui suit
 l'installation du dépôt.
 
@@ -24,6 +24,7 @@ Ce document va du plus simple au plus complet :
 |---|---|---|
 | `mitre-attack-mcp` | Aucune | **Non** — corpus embarqué |
 | `detection-mcp` | Aucune | **Non** — analyse purement locale |
+| `artefact-mcp` | Aucune | **Non** — JWT et décodage, en local |
 | `vuln-intel-mcp` | Aucune | Oui — NVD, CISA, EPSS |
 | `web-recon-mcp` | Aucune | Oui — vers la cible analysée |
 | `email-security-mcp` | Aucune | Oui — DNS public |
@@ -169,7 +170,7 @@ teknologiia.com   note A (100/100)  SPF 1/10 lookups · DKIM 2 clés · DMARC re
 pytest
 ```
 
-Résultat attendu : **661 tests**, tous verts, **sans aucun accès réseau ni clé
+Résultat attendu : **939 tests**, tous verts, **sans aucun accès réseau ni clé
 d'API**. Les sources publiques sont simulées ; un test qui dépendrait de la
 disponibilité du NVD finirait par être ignoré.
 
@@ -438,12 +439,12 @@ python mcpb/outils/construire.py
 1 · Synchroniser le code embarqué
   ✓ mcpb/src est identique à src/
 2 · Générer le manifeste
-  ✓ 46 outils déclarés par le serveur lui-même
+  ✓ 57 outils déclarés par le serveur lui-même
 3 · Empaqueter
-  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (678 Ko)
+  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (941 Ko)
 4 · Vérifier l'artefact
-  ✓ exécuté depuis une copie dépaquetée — 36 outils exposés.
-  ✓ 113 fichiers, aucun artefact de construction embarqué
+  ✓ exécuté depuis une copie dépaquetée — 47 outils exposés.
+  ✓ 129 fichiers, aucun artefact de construction embarqué
 ```
 
 La quatrième étape est celle qui compte : empaqueter réussit même quand le

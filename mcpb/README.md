@@ -35,7 +35,7 @@ python mcpb/outils/construire.py --verifier-seulement  # contrôle l'écart src/
 
 | Chemin | Rôle | Versionné |
 |---|---|---|
-| `manifest.json` | Généré — 46 outils, déclarés par le serveur lui-même | oui |
+| `manifest.json` | Généré — 57 outils, déclarés par le serveur lui-même | oui |
 | `pyproject.toml` | Dépendances, installées par `uv` chez le destinataire | oui |
 | `server/main.py` | Point d'entrée lancé par `uv` | oui |
 | `.mcpbignore` | Ce qui ne doit pas partir dans le paquet | oui |
@@ -57,7 +57,7 @@ scripts qui pointent vers des chemins inexistants chez lui.
 Le format MCPB accepte deux façons de livrer un serveur Python. Embarquer les
 dépendances donnerait un paquet **par plateforme et par version de Python** —
 `cryptography` et `pydantic-core` sont compilés. Avec `uv`, un seul fichier de
-678 Ko fonctionne sur Windows, macOS et Linux.
+941 Ko fonctionne sur Windows, macOS et Linux.
 
 Le prix : le destinataire installe `uv` une fois. Voir
 [`../docs/INSTALLER.md`](../docs/INSTALLER.md).
@@ -95,6 +95,30 @@ PKCS#7 signature verification not yet implemented.
 quelle qu'elle soit, ne peut donc être confirmée par cet outil aujourd'hui.
 `signer.py` contrôle donc le bloc lui-même : présence de l'en-tête et du pied,
 cohérence de la longueur déclarée, lecture du PKCS#7 et de son certificat.
+
+### « Failed to preview extension : Invalid comment length »
+
+Le défaut réellement rencontré, et corrigé. `signMcpbFile` (dans `sign.js` de
+la CLI) ajoute le bloc de signature par simple concaténation d'octets, sans
+mettre à jour le champ de longueur de commentaire de l'enregistrement de fin
+d'archive ZIP (EOCD). Le fichier obtenu déclare un commentaire de longueur 0
+alors qu'il porte réellement ~2,2 Ko de données après cette déclaration.
+
+`zipfile` de Python **tolère** cet écart — c'est pourquoi nos propres
+vérifications passaient. **Claude Desktop valide ce champ strictement** et
+refuse le fichier avec exactement ce message.
+
+`signer.py` corrige désormais le champ après chaque signature, et un contrôle
+strict — qui rejoue la même validation que Claude Desktop — s'exécute avant de
+publier l'empreinte. Si vous obtenez encore cette erreur, l'extension a été
+signée avec une version de `signer.py` antérieure à ce correctif :
+reconstruisez et signez à nouveau.
+
+**Ne signez jamais un fichier déjà signé.** `mcpb sign` relit l'archive telle
+quelle et empile un second bloc dessus, sans erreur ni avertissement — un
+paquet peut ainsi porter deux signatures superposées sans que rien ne le
+signale. `signer.py` refuse ce cas net ; reconstruisez toujours avec
+`construire.py` avant de signer.
 
 ### La clé privée ne quitte jamais la machine
 
