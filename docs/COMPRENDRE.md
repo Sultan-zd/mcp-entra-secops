@@ -1212,7 +1212,7 @@ mcp-entra-secops/
 │   ├── RESEARCH.md                 scan du marché, exposition sécurisée
 │   └── COMPRENDRE.md               ← ce document
 ├── SECURITY.md                   ★ modèle de menace, incidents passés, vérification
-├── .github/workflows/ci.yml     ← lint, types, tests, évaluation, secrets, paquet
+├── .github/workflows/ci.yml     ← lint, types, tests, éval., secrets, dépendances, paquet
 └── .github/workflows/fraicheur-corpus.yml ← les corpus ont-ils divergé ?
 ```
 

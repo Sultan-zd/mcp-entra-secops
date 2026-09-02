@@ -174,20 +174,44 @@ poste.
 
 ### T7 — Dépendances vulnérables
 
-`ruff` applique les règles `S` (équivalent bandit) sur tout le code, et
-`gitleaks` inspecte l'historique complet à chaque exécution de la CI.
+L'essentiel de ce qui s'exécute n'a pas été écrit ici. `ruff` applique les
+règles `S` (équivalent bandit) sur **notre** code ; `pip-audit` couvre **celui
+des autres**, et `gitleaks` inspecte l'historique complet à chaque exécution
+de la CI.
 
-**Aucun scanner de dépendances n'est en place** — ni `pip-audit`, ni Trivy.
-Une CVE dans une dépendance transitive ne serait signalée par rien. C'est la
-lacune la plus facile à combler de cette liste.
+```bash
+pip-audit --ignore-vuln PYSEC-2026-2447    # ce que la CI exécute
+```
+
+Le job **bloque dès qu'une nouvelle vulnérabilité apparaît**. Une seule
+exclusion existe, et elle est motivée par une évaluation, pas par le confort :
+
+> **PYSEC-2026-2447 / CVE-2025-69872 — `diskcache`, désérialisation `pickle`.**
+> Dépendance **transitive**, tirée par `pySigma`. **Aucune version corrigée
+> n'existe** : tout `diskcache` jusqu'à 5.6.3 est concerné. L'avis exige un
+> accès en **écriture** au répertoire de cache (CVSS 4.0 `AV:L/PR:L/UI:A`).
+>
+> **Le chemin est injoignable depuis ARGUS**, et cela a été vérifié plutôt que
+> supposé : `pySigma` n'utilise `diskcache` que dans `sigma/data/mitre_attack.py`
+> et `mitre_d3fend.py` ; ARGUS n'importe jamais `sigma.data.*` — il embarque son
+> propre corpus ATT&CK. À l'exécution, `diskcache` n'est même pas chargé en
+> mémoire pendant l'analyse et la conversion d'une règle Sigma, et aucun
+> répertoire de cache n'est créé.
+>
+> À retirer dès qu'un correctif est publié.
+
+Ce que cet audit ne couvre pas : les dépendances **JavaScript** de la CLI
+d'empaquetage (`@anthropic-ai/mcpb`), utilisée à la construction et jamais
+distribuée.
 
 ---
 
 ## 5 · Ce qui n'est PAS couvert
 
 - **Aucun audit externe.** Le code n'a été relu que par son auteur.
-- **Aucun scan de dépendances** (T7).
 - **Aucune vérification d'intégrité des sources amont** (T4).
+- **Les dépendances JavaScript de l'outillage de construction ne sont pas
+  auditées** (T7) — seules les dépendances Python le sont.
 - **Le certificat de signature est auto-signé** (T3).
 - **Le domaine Entra n'a pas été validé contre un tenant réel** au moment où
   ces lignes sont écrites — la checklist existe

@@ -84,6 +84,44 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  dependances:
+    name: Vulnerabilites des dependances
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      # pip fait partie de l'environnement audite. Un pip ancien ferait
+      # remonter ses propres avis, sans rapport avec les dependances du
+      # projet : le mettre a jour d'abord evite ce bruit.
+      - name: Mettre pip a jour
+        run: python -m pip install --upgrade pip
+
+      - name: Installer le projet
+        run: pip install -e ".[dev]"
+
+      # Bloque des qu'une NOUVELLE vulnerabilite apparait dans une dependance.
+      #
+      # PYSEC-2026-2447 (CVE-2025-69872) est ecarte explicitement, apres
+      # evaluation et non par confort :
+      #   · diskcache est une dependance TRANSITIVE, tiree par pySigma ;
+      #   · aucune version corrigee n'existe (tout diskcache <= 5.6.3) ;
+      #   · l'avis exige un acces en ECRITURE au repertoire de cache
+      #     (CVSS 4.0 AV:L/PR:L/UI:A) ;
+      #   · pySigma ne l'utilise que dans sigma/data/mitre_attack.py et
+      #     mitre_d3fend.py. ARGUS n'importe JAMAIS sigma.data.* — il embarque
+      #     son propre corpus ATT&CK. Verifie : diskcache n'est meme pas charge
+      #     en memoire pendant l'analyse et la conversion d'une regle Sigma, et
+      #     aucun repertoire de cache n'est cree.
+      #
+      # A retirer des qu'un correctif diskcache est publie.
+      - name: Auditer les dependances
+        run: pip-audit --ignore-vuln PYSEC-2026-2447
+
   paquet:
     name: Paquet MCPB distribuable
     runs-on: ubuntu-latest
