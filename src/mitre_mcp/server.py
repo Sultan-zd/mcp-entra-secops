@@ -17,6 +17,7 @@ from .tools import (
     lookup_technique,
     map_findings_to_attack,
     search_techniques,
+    suggest_countermeasures,
 )
 
 INSTRUCTIONS = """\
@@ -31,6 +32,7 @@ Quel outil pour quelle question :
   « Que ne détecte-t-on pas encore ? »                → coverage_report
   « Qui est ce groupe d'attaquants ? »                → lookup_group
   « Je veux visualiser tout ça »                      → build_navigator_layer
+  « Quoi construire pour s'en défendre ? »             → suggest_countermeasures
 
 map_findings_to_attack est le point de jonction avec le reste d'ARGUS :
 passez-lui les types de détection Entra (leakedCredentials, passwordSpray…),
@@ -49,6 +51,12 @@ qu'elle a été retirée et vers quoi elle a été remplacée.
 corpus_info donne la version embarquée. Un corpus figé est un compromis assumé :
 il rend le serveur utilisable hors ligne, au prix d'un décalage possible avec la
 dernière version publiée.
+
+suggest_countermeasures ajoute le contrepoint défensif MITRE D3FEND : à une
+technique ATT&CK, il associe des contre-mesures NOMMÉES, classées par tactique
+défensive. D3FEND mappe souvent une sous-technique sans mapper sa parente ;
+l'outil retrouve les contre-mesures des filles et le signale, plutôt que de
+rendre une liste vide trompeuse.
 """
 
 #: Aucun outil ne touche au réseau ni ne modifie quoi que ce soit. Le corpus
@@ -70,6 +78,7 @@ TOOLS = (
     lookup_group,
     build_navigator_layer,
     list_known_findings,
+    suggest_countermeasures,
     corpus_info,
 )
 

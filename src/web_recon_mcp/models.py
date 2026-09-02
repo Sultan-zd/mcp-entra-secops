@@ -136,3 +136,39 @@ class WebExposureReport(BaseModel):
         description="Analyses n'ayant pas abouti. La note ne porte que sur le reste.",
     )
     findings: list[str] = Field(default_factory=list)
+
+
+class DomainRegistration(BaseModel):
+    """Ce qu'un registre dit d'un domaine, via RDAP."""
+
+    domain: str
+    registered_on: str | None = None
+    expires_on: str | None = None
+    last_changed: str | None = None
+    age_days: int | None = Field(
+        default=None,
+        description="Âge en jours. Un domaine de moins de 30 jours est un signal "
+        "de hameçonnage parmi les plus forts qui existent.",
+    )
+    registrar: str | None = None
+    nameservers: list[str] = Field(default_factory=list)
+    status: list[str] = Field(default_factory=list, description="Codes d'état EPP du registre.")
+    dnssec: bool | None = None
+    findings: list[str] = Field(default_factory=list)
+    source: str = "rdap.org"
+
+
+class IpOwner(BaseModel):
+    """Ce qu'un registre dit d'une adresse IP."""
+
+    ip: str
+    network: str | None = Field(default=None, description="Plage allouée.")
+    name: str | None = Field(default=None, description="Nom de l'allocation.")
+    allocation_type: str | None = None
+    country: str | None = None
+    asn: int | None = None
+    asn_holder: str | None = Field(default=None, description="Opérateur annonçant le préfixe.")
+    announced: bool | None = Field(
+        default=None, description="Le préfixe est-il annoncé sur Internet en ce moment ?"
+    )
+    findings: list[str] = Field(default_factory=list)

@@ -9,16 +9,21 @@ relayer.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
 from typing import Annotated, Any
 
 from pydantic import Field
 
+from . import d3fend as d3f
 from .corpus import charger, chercher, resoudre_identifiant
 from .mapping import constats_connus, correspondances
 from .models import (
     AttackMapping,
     CorpusInfo,
     CoverageReport,
+    D3fendCountermeasure,
+    D3fendSuggestion,
+    EmbeddedDataset,
     GroupProfile,
     MappedFinding,
     NavigatorLayer,
@@ -477,14 +482,115 @@ async def build_navigator_layer(
     )
 
 
-async def corpus_info() -> CorpusInfo:
-    """Version et contenu du corpus ATT&CK embarqué.
+def _fraicheur_des_corpus() -> list[EmbeddedDataset]:
+    """L'âge des quatre référentiels embarqués du paquet.
 
-    À consulter avant de se fier à une réponse : un corpus figé au moment de la
-    construction est un compromis assumé — il rend le serveur utilisable hors
-    ligne, au prix d'un décalage possible avec la dernière version publiée.
+    Les imports sont locaux à dessein : ces corpus vivent dans trois paquets
+    différents, et un import de tête créerait un cycle avec `detection_mcp`,
+    qui importe déjà `mitre_mcp.corpus`.
+
+    Un corpus absent ou illisible est **rendu comme tel**, pas omis : une liste
+    plus courte laisserait croire que le paquet n'embarque que trois
+    référentiels.
+    """
+    from argus_net import evaluer_fraicheur
+
+    from .corpus import charger as charger_attack
+    from .d3fend import charger as charger_d3fend
+
+    releves: list[EmbeddedDataset] = []
+
+    def _relever(
+        nom: str, lecture: Callable[[], tuple[str | None, str | None]], script: str
+    ) -> None:
+        try:
+            distille, version = lecture()
+        except Exception as exc:
+            releves.append(
+                EmbeddedDataset(
+                    name=nom,
+                    stale=True,
+                    note=f"{nom} n'a pas pu être chargé ({exc}). Régénérer avec « {script} ».",
+                )
+            )
+            return
+        f = evaluer_fraicheur(nom, distille, version, regenerer_avec=script)
+        releves.append(
+            EmbeddedDataset(
+                name=f.name,
+                distilled_at=f.distilled_at,
+                source_version=f.source_version,
+                age_days=f.age_days,
+                stale=f.stale,
+                note=f.note,
+            )
+        )
+
+    _relever(
+        "MITRE ATT&CK",
+        lambda: (charger_attack().distilled_at, charger_attack().version),
+        "python scripts/distiller_attack.py",
+    )
+    _relever(
+        "MITRE D3FEND",
+        lambda: (charger_d3fend().distilled_at, None),
+        "python scripts/distiller_d3fend.py",
+    )
+
+    def _cwe() -> tuple[str | None, str | None]:
+        from vuln_intel_mcp.weaknesses import charger as charger_cwe
+
+        c = charger_cwe()
+        return c.distilled_at, c.version
+
+    def _windows() -> tuple[str | None, str | None]:
+        from detection_mcp.windows_events import charger as charger_windows
+
+        return charger_windows().distilled_at, None
+
+    _relever("CWE", _cwe, "python scripts/distiller_cwe.py")
+    _relever(
+        "Événements Windows / Sysmon",
+        _windows,
+        "python scripts/distiller_windows_events.py",
+    )
+    return releves
+
+
+async def corpus_info() -> CorpusInfo:
+    """Contenu ET ÂGE des quatre référentiels embarqués dans le paquet.
+
+    **À consulter avant de se fier à une absence de résultat.** Les corpus sont
+    figés au moment de la construction : c'est ce qui rend vingt-quatre outils
+    utilisables hors ligne, et c'est un compromis assumé. Mais un corpus figé
+    ne vieillit pas bruyamment — il répond avec la même assurance à six jours
+    qu'à seize mois.
+
+    Cet outil est le seul endroit qui dise depuis quand chaque référentiel ne
+    bouge plus. Si `stale_datasets` n'est pas vide, alors « cette technique
+    n'existe pas dans ATT&CK » peut vouloir dire « n'existait pas encore lors
+    de la construction » : signalez-le plutôt que de conclure à une faute de
+    frappe.
+
+    Les seuils suivent le rythme de publication réel des sources — le catalogue
+    CWE change deux à quatre fois par an, ATT&CK publie par semestre.
     """
     corpus = charger()
+    datasets = _fraicheur_des_corpus()
+    perimes = [d.name for d in datasets if d.stale]
+
+    if perimes:
+        note = (
+            "Corpus embarqués : aucun appel réseau. "
+            f"{len(perimes)} référentiel(s) à régénérer — "
+            "relativiser les absences de résultat en conséquence."
+        )
+    else:
+        note = (
+            "Corpus embarqués : aucun appel réseau, et tous distillés assez "
+            "récemment pour représenter l'état publié."
+        )
+
     return CorpusInfo(
         attack_version=corpus.version,
         techniques=len(corpus.techniques),
@@ -493,8 +599,62 @@ async def corpus_info() -> CorpusInfo:
         groups=len(corpus.groups),
         revoked_techniques=len(corpus.revoked),
         offline=True,
-        note=(
-            "Corpus embarqué : aucun appel réseau. Régénérable avec "
-            "« python scripts/distiller_attack.py »."
-        ),
+        datasets=datasets,
+        stale_datasets=perimes,
+        note=note,
+    )
+
+
+def _contremesure_en_modele(mesure: d3f.ContreMesure) -> D3fendCountermeasure:
+    return D3fendCountermeasure(
+        countermeasure=mesure.countermeasure,
+        tactic=mesure.tactic,
+        definition=mesure.definition,
+        d3fend_id=mesure.d3fend_id,
+        relationship=mesure.relationship,
+        artifact=mesure.artifact,
+    )
+
+
+async def suggest_countermeasures(
+    technique_id: Annotated[str, Field(description="Identifiant, par exemple T1566 ou T1055.")],
+) -> D3fendSuggestion:
+    """Contre-mesures MITRE D3FEND pour une technique ATT&CK.
+
+    Quoi CONSTRUIRE pour s'en défendre, pas seulement quoi surveiller.
+
+    `lookup_technique` dit *quoi surveiller* (détection). Cet outil répond à la
+    question suivante : une fois la technique identifiée, **quoi construire**
+    pour s'en défendre ? Chaque contre-mesure est nommée et classée par
+    tactique défensive — Harden, Detect, Isolate, Deceive, Evict, Model,
+    Restore — dans l'ordre où une défense se construit réellement : durcir la
+    surface avant de chercher à détecter ce qui la franchit.
+
+    **Le piège que cet outil traite explicitement.** D3FEND mappe très souvent
+    des *sous-techniques*, jamais leur technique parente : `T1055.003` a des
+    contre-mesures nommées, `T1055` seul n'en a directement aucune — alors que
+    dix de ses sous-techniques en ont. Rendre « aucune contre-mesure » pour
+    `T1055` serait un faux négatif. Cet outil retrouve donc les contre-mesures
+    des sous-techniques quand la technique demandée n'en a pas directement, et
+    le dit dans `notes` plutôt que de le laisser deviner.
+
+    Entièrement local : les correspondances D3FEND sont embarquées, aucun
+    réseau requis. Une technique sans aucune contre-mesure D3FEND connue,
+    directement ou via ses filles, le dit aussi — D3FEND ne couvre encore
+    qu'une partie du référentiel ATT&CK.
+    """
+    identifiant = resoudre_identifiant(technique_id)
+    corpus = charger()
+    sous = [t["id"] for t in corpus.sous_techniques(identifiant)]
+
+    suggestion = d3f.suggerer(identifiant, sous_techniques=sous)
+
+    return D3fendSuggestion(
+        technique_id=suggestion.technique_id,
+        countermeasures=[_contremesure_en_modele(m) for m in suggestion.countermeasures],
+        via_subtechniques={
+            sous_id: [_contremesure_en_modele(m) for m in mesures]
+            for sous_id, mesures in suggestion.via_subtechniques.items()
+        },
+        notes=suggestion.notes,
     )

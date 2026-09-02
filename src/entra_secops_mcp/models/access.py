@@ -149,11 +149,28 @@ class UserContext(BaseModel):
     privileged_roles: list[str] = Field(
         default_factory=list, description="Sous-ensemble des rôles à privilèges élevés."
     )
-    is_privileged: bool = Field(description="Le compte détient-il au moins un rôle à privilèges ?")
+    is_privileged: bool = Field(
+        description="Le compte détient-il au moins un rôle à privilèges ? "
+        "N'a de sens QUE si `memberships_readable` est vrai."
+    )
+    memberships_readable: bool = Field(
+        default=True,
+        description="Les appartenances ont-elles pu être lues ? Si faux, `groups`, "
+        "`directory_roles` et `is_privileged` sont VIDES PAR IGNORANCE, pas parce que "
+        "le compte n'a aucun rôle : ne jamais conclure « compte sans privilège » "
+        "dans ce cas.",
+    )
     notes: list[str] = Field(default_factory=list, description="Observations calculées.")
 
     @classmethod
-    def build(cls, user: dict[str, Any], memberships: list[dict[str, Any]]) -> UserContext:
+    def build(
+        cls,
+        user: dict[str, Any],
+        memberships: list[dict[str, Any]],
+        *,
+        memberships_readable: bool = True,
+        raison_illisible: str | None = None,
+    ) -> UserContext:
         groupes: list[str] = []
         roles: list[str] = []
         for item in memberships:
@@ -168,6 +185,18 @@ class UserContext(BaseModel):
         privilegies = [r for r in roles if is_privileged_role(r)]
 
         notes: list[str] = []
+        if not memberships_readable:
+            # Le pire mode de défaillance possible pour cet outil : rendre
+            # `is_privileged=False` sans le dire reviendrait à présenter un
+            # administrateur global comme un compte ordinaire. Le constat passe
+            # donc en tête, avant tout le reste.
+            notes.append(
+                "APPARTENANCES ILLISIBLES : groupes et rôles n'ont PAS pu être lus"
+                + (f" ({raison_illisible})" if raison_illisible else "")
+                + ". « is_privileged: false » signifie ici INCONNU, pas « sans "
+                "privilège » — la gravité de l'incident ne peut pas être conclue "
+                "à partir de cette fiche."
+            )
         if privilegies:
             notes.append(
                 "Compte à privilèges élevés (" + ", ".join(privilegies) + "). "
@@ -192,5 +221,6 @@ class UserContext(BaseModel):
             directory_roles=sorted(roles),
             privileged_roles=sorted(privilegies),
             is_privileged=bool(privilegies),
+            memberships_readable=memberships_readable,
             notes=notes,
         )

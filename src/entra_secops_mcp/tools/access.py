@@ -91,5 +91,17 @@ async def get_user_context(
         logger.warning("Compte %s sans identifiant d'objet : appartenances ignorées.", upn)
         return UserContext.build(user, [])
 
-    memberships = await client.get(f"{USERS_ENDPOINT}/{object_id}/memberOf")
+    # `memberOf` exige `Directory.Read.All`, une permission plus large que le
+    # `User.Read.All` qui suffit à lire la fiche elle-même. Un tenant accordé
+    # au plus juste peut donc répondre 403 ICI alors que tout le reste a
+    # fonctionné. Rendre une fiche partielle vaut mieux qu'un échec total —
+    # à condition que l'ignorance soit dite : sans cela, `is_privileged=false`
+    # présenterait un administrateur global comme un compte ordinaire.
+    try:
+        memberships = await client.get(f"{USERS_ENDPOINT}/{object_id}/memberOf")
+    except GraphError as exc:
+        logger.warning("Appartenances de %s illisibles : %s", upn, exc)
+        return UserContext.build(
+            user, [], memberships_readable=False, raison_illisible=str(exc)
+        )
     return UserContext.build(user, memberships)

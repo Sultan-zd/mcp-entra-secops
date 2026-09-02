@@ -124,6 +124,71 @@ async def test_upn_inconnu_message_actionnable() -> None:
         await access.get_user_context("personne@teknologiia.com")
 
 
+# --------------------------------------------------------------------------
+# Moindre privilège : quand les appartenances sont refusées
+# --------------------------------------------------------------------------
+async def test_appartenances_refusees_ne_font_pas_echouer_l_outil(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`memberOf` exige `Directory.Read.All`, plus large que le `User.Read.All`
+    qui suffit à lire la fiche. Un tenant accordé au plus juste répond 403 sur
+    cet appel seul : la fiche reste utile, l'outil ne doit pas tomber."""
+    client = runtime.get_client()
+    reel = client.get
+
+    async def _refuser(chemin: str, **kwargs: object) -> list[dict[str, object]]:
+        if "memberOf" in chemin:
+            raise GraphError("Permission insuffisante (403).")
+        return await reel(chemin, **kwargs)  # type: ignore[no-any-return]
+
+    monkeypatch.setattr(client, "get", _refuser)
+
+    contexte = await access.get_user_context("sarah.n@teknologiia.com")
+
+    assert contexte.user_principal_name == "sarah.n@teknologiia.com"
+    assert contexte.memberships_readable is False
+
+
+async def test_appartenances_refusees_n_annoncent_jamais_un_compte_sain(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Le pire mode de défaillance de cet outil.
+
+    sarah.n EST administratrice globale. Si ses appartenances sont illisibles,
+    `is_privileged` retombe mécaniquement à `false` — rendre cela sans le dire
+    présenterait une administratrice globale comme un compte ordinaire, et
+    ferait sous-évaluer un incident majeur. Le constat doit être en TÊTE des
+    notes, et le drapeau doit permettre de ne pas lire `is_privileged`.
+    """
+    client = runtime.get_client()
+    reel = client.get
+
+    async def _refuser(chemin: str, **kwargs: object) -> list[dict[str, object]]:
+        if "memberOf" in chemin:
+            raise GraphError("Permission insuffisante (403).")
+        return await reel(chemin, **kwargs)  # type: ignore[no-any-return]
+
+    monkeypatch.setattr(client, "get", _refuser)
+
+    contexte = await access.get_user_context("sarah.n@teknologiia.com")
+
+    assert contexte.is_privileged is False, "attendu : faux PAR IGNORANCE"
+    assert contexte.memberships_readable is False, "c'est ce drapeau qui l'explique"
+    assert "ILLISIBLES" in contexte.notes[0]
+    assert "INCONNU" in contexte.notes[0]
+
+
+def test_une_fiche_complete_declare_ses_appartenances_lisibles() -> None:
+    """Le drapeau ne doit pas être un faux positif permanent."""
+    contexte = UserContext.build(
+        {"userPrincipalName": "a@b.c", "id": "1"},
+        [{"displayName": "Global Administrator", "@odata.type": "#microsoft.graph.directoryRole"}],
+    )
+
+    assert contexte.memberships_readable is True
+    assert contexte.is_privileged is True
+
+
 def test_role_privilegie_insensible_a_la_casse() -> None:
     contexte = UserContext.build(
         {"userPrincipalName": "x@y.com", "id": "1"},

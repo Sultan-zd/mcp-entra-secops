@@ -36,6 +36,7 @@ PAQUETS = (
     "vuln_intel_mcp",
     "mitre_mcp",
     "detection_mcp",
+    "artefact_mcp",
     "web_recon_mcp",
     "email_security_mcp",
     "threat_intel_mcp",

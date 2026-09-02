@@ -3,7 +3,7 @@
 Ouvrir un port change la nature du serveur : en stdio, le client lance
 lui-même le processus et la surface réseau est *nulle*. Ces tests portent sur
 la seule décision irréversible que le transport HTTP introduit — accepter de
-servir 46 outils de sécurité, et les identifiants de tenant qui vont avec, à
+servir 50 outils de sécurité, et les identifiants de tenant qui vont avec, à
 quelqu'un d'autre que soi.
 
 Le dernier test démarre un **vrai serveur** et lui envoie de **vraies
@@ -306,7 +306,7 @@ def test_un_client_authentifie_obtient_les_outils(serveur_http: dict[str, object
 
     # Le même compte qu'en stdio sans clé : le transport ne change pas ce qui
     # est exposé, seulement la façon d'y accéder.
-    assert len(outils) == 36
+    assert len(outils) == 47
     noms = {str(o["name"]) for o in outils}
     assert "prioritize_cves" in noms
     assert "analyze_sigma_rule" in noms

@@ -8,13 +8,17 @@ courriel signalé par un utilisateur.
 
 from __future__ import annotations
 
-from typing import Annotated
+import asyncio
+from typing import Annotated, Any
 
 from pydantic import Field
 
 from . import couverture as cv
 from . import iocs as ioc
+from . import redos as rd
 from . import sigma_rules as sr
+from . import windows_events as we
+from . import yara_rules as yr
 from .models import (
     ConvertedRule,
     CoverageEntry,
@@ -24,10 +28,17 @@ from .models import (
     ExtractedIOCs,
     FileHash,
     LinkedTechnique,
+    RedosAnalysis,
+    RedosFinding,
     RuleExplanation,
     RuleQuality,
     RuleSetCoverage,
     SigmaAnalysis,
+    SysmonEvent,
+    WindowsEventMatches,
+    WindowsSecurityEvent,
+    YaraAnalysis,
+    YaraString,
 )
 
 #: Les douze tactiques d'ATT&CK Enterprise, pour dire ce qu'un jeu de règles
@@ -484,4 +495,310 @@ tags:
         detection_guidance=conseils[:5],
         sigma_skeleton=squelette,
         notes=notes,
+    )
+
+
+# --------------------------------------------------------------------------
+# Règles YARA
+# --------------------------------------------------------------------------
+async def analyze_yara_rule(
+    rule: Annotated[str, Field(description="La règle YARA, en texte.")],
+) -> YaraAnalysis:
+    """Analyse une règle YARA : conformité, qualité, et rattachement à ATT&CK.
+
+    Le pendant fichier de `analyze_sigma_rule`. Deux bibliothèques de
+    référence font le travail qu'aucune règle maison ne devrait refaire :
+    `plyara` lit la structure, le compilateur `yara-python` officiel juge de
+    la conformité — la même séparation que Sigma, pour la même raison :
+    réimplémenter la grammaire produirait une règle qui *paraît* correcte et
+    rate silencieusement les fichiers qu'elle prétend détecter.
+
+    Ce que cet outil vérifie et qu'un simple `yara.compile()` ne dit pas :
+
+    * **Des chaînes texte courtes sans `fullword`.** `$a = "cmd"` correspond à
+      l'intérieur de « command », « recmd.exe », et de tout mot qui contient
+      ces trois lettres — la cause la plus fréquente de faux positifs en
+      pratique.
+    * **Une condition qui ne sélectionne rien.** `any of them` sur des chaînes
+      génériques, ou une condition `true` qui accepte tout ce qu'on lui
+      présente.
+    * **Les étiquettes ATT&CK sont-elles encore valides ?** Aucun champ de
+      métadonnée YARA n'est standardisé pour les porter ; l'outil les cherche
+      dans tout ce qui est textuel, puis les confronte au même corpus ATT&CK
+      embarqué que Sigma — une technique révoquée est signalée, pas rendue
+      telle quelle.
+
+    Une règle **non conforme** à la syntaxe YARA est tout de même analysée et
+    notée : c'est le cas d'un brouillon, et c'est là que les conseils servent
+    le plus. Le champ `spec_compliant` dit ce qu'il en est — et un détail
+    vérifié avant d'écrire cet outil : une règle vide compile *avec succès*
+    dans le compilateur officiel, avec zéro règle ; ce cas est traité comme
+    non conforme plutôt que silencieusement accepté.
+
+    Le `score` et le `grade` sont calculés par du code déterministe : reprenez-les
+    tels quels, ne les recalculez pas.
+    """
+    analyse = yr.analyser(rule)
+    conforme, motif = yr.valider_strictement(rule)
+    liens = cv.lier(analyse.attack_techniques)
+    qualite = yr.evaluer_qualite(analyse)
+
+    if any(t.status != "valide" for t in liens.techniques):
+        qualite.score = max(0, qualite.score - yr.POIDS["attack_tags"])
+        qualite.strengths = [s for s in qualite.strengths if "ATT&CK" not in s]
+        qualite.findings.insert(
+            0,
+            "Les étiquettes ATT&CK ne sont pas exploitables ("
+            + ", ".join(f"{t.id} : {t.status}" for t in liens.techniques if t.status != "valide")
+            + ") : la règle ne comptera dans aucune revue de couverture.",
+        )
+        qualite.grade = (
+            "A" if qualite.score >= 90
+            else "B" if qualite.score >= 75
+            else "C" if qualite.score >= 55
+            else "D" if qualite.score >= 35
+            else "F"
+        )
+
+    return YaraAnalysis(
+        name=analyse.name,
+        tags=analyse.tags,
+        scopes=analyse.scopes,
+        imports=analyse.imports,
+        metadata=analyse.metadata,
+        strings=[
+            YaraString(name=s.name, type=s.type, value=s.value, modifiers=s.modifiers)
+            for s in analyse.strings
+        ],
+        condition=analyse.condition,
+        spec_compliant=conforme,
+        spec_error=motif,
+        quality=RuleQuality(
+            score=qualite.score,
+            grade=qualite.grade,
+            findings=qualite.findings,
+            strengths=qualite.strengths,
+        ),
+        attack=[
+            LinkedTechnique(
+                id=t.id, status=t.status, name=t.name, tactics=t.tactics,
+                platforms=t.platforms, url=t.url, replaced_by=t.replaced_by,
+                detection_guidance=t.detection_guidance, note=t.note,
+            )
+            for t in liens.techniques
+        ],
+        attack_findings=liens.findings,
+        attack_version=liens.attack_version,
+    )
+
+
+# --------------------------------------------------------------------------
+# Référence des événements Windows / Sysmon
+# --------------------------------------------------------------------------
+def _vers_securite(evenement: dict[str, Any]) -> WindowsSecurityEvent:
+    return WindowsSecurityEvent(
+        current_id=evenement.get("current_id"),
+        legacy_ids=evenement.get("legacy_ids", []),
+        criticality=evenement.get("criticality", ""),
+        summary=evenement.get("summary", ""),
+    )
+
+
+def _vers_sysmon(evenement: dict[str, Any]) -> SysmonEvent:
+    return SysmonEvent(
+        id=evenement["id"], name=evenement["name"], description=evenement["description"]
+    )
+
+
+async def lookup_windows_event(
+    event_id: Annotated[
+        str,
+        Field(
+            description="L'identifiant numérique de l'événement, tel qu'il apparaît dans le "
+            "journal — par exemple 4688, ou 1 pour un événement Sysmon."
+        ),
+    ],
+) -> WindowsEventMatches:
+    """Identifie un ID d'événement Windows : audit de sécurité natif, et/ou Sysmon.
+
+    Les deux canaux sont interrogés et rendus séparément, jamais fusionnés sur
+    le seul numéro : Sysmon ID 1 (« Process creation ») et un éventuel ID 1 côté
+    audit de sécurité ne désignent rien de commun. Un même appel peut donc
+    renvoyer une correspondance dans les deux listes — c'est à l'appelant de
+    savoir de quel journal provient l'ID qu'il a en main.
+
+    Côté audit de sécurité, l'identifiant est cherché d'abord parmi les IDs
+    modernes, puis parmi les IDs antérieurs à Vista (« legacy ») — certains
+    événements ont changé de numéro entre les deux, et un même ID historique
+    peut avoir été scindé en plusieurs événements modernes distincts.
+
+    Côté Sysmon, aucune criticité n'est rendue : la documentation officielle
+    n'en publie pas pour ces IDs, l'intérêt réel dépendant de la configuration
+    déployée — pas d'un jugement fixe de Microsoft.
+    """
+    securite = [_vers_securite(e) for e in we.evenement_securite(event_id)]
+    sysmon_evt = we.evenement_sysmon(event_id)
+    sysmon = [_vers_sysmon(sysmon_evt)] if sysmon_evt else []
+
+    note = None
+    if not securite and not sysmon:
+        note = (
+            f"Aucune correspondance pour « {event_id} » dans l'audit de sécurité Windows "
+            "(Appendix L) ni dans les événements Sysmon (IDs 1-29, 255)."
+        )
+
+    return WindowsEventMatches(
+        query=event_id, security_matches=securite, sysmon_matches=sysmon, note=note
+    )
+
+
+async def search_windows_events(
+    query: Annotated[
+        str,
+        Field(description="Mots-clés à chercher dans les résumés/descriptions — par exemple "
+        "« kerberos », « group deleted », « clipboard »."),
+    ],
+    source: Annotated[
+        str,
+        Field(description="security, sysmon ou all (les deux)."),
+    ] = "all",
+) -> WindowsEventMatches:
+    """Cherche des événements Windows par mot-clé, dans l'audit de sécurité et/ou Sysmon.
+
+    Utile pour partir d'une intention (« comment repérer un ajout à un groupe
+    protégé ? ») plutôt que d'un ID déjà connu. La recherche est un simple
+    filtre par mots — le catalogue est petit (379 entrées sécurité, 30 Sysmon),
+    une pertinence calculée finement n'apporterait rien de mesurable.
+    """
+    if not query.strip():
+        raise ValueError("Indiquez des mots-clés.")
+
+    cle = source.strip().lower()
+    if cle not in ("security", "sysmon", "all"):
+        raise ValueError("source doit valoir security, sysmon ou all.")
+
+    securite = (
+        [_vers_securite(e) for e in we.chercher_securite(query)]
+        if cle in ("security", "all")
+        else []
+    )
+    sysmon = (
+        [_vers_sysmon(e) for e in we.chercher_sysmon(query)] if cle in ("sysmon", "all") else []
+    )
+
+    note = None
+    if not securite and not sysmon:
+        note = f"Aucun événement ne correspond à « {query} »."
+
+    return WindowsEventMatches(
+        query=query, security_matches=securite, sysmon_matches=sysmon, note=note
+    )
+
+
+# --------------------------------------------------------------------------
+# ReDoS
+# --------------------------------------------------------------------------
+#: Confirmer chaque candidat coûte jusqu'au budget de temps de `rd.confirmer`
+#: (2 s par défaut) : borner leur nombre borne le temps de réponse de l'outil
+#: même sur un motif truffé de constructions suspectes.
+NOMBRE_CONFIRMATIONS_MAX = 5
+
+
+async def check_redos(
+    pattern: Annotated[
+        str,
+        Field(
+            description="L'expression régulière à examiner — celle d'un modificateur "
+            "|re: Sigma, d'une chaîne $re = /…/ YARA, ou tout autre motif Python `re`."
+        ),
+    ],
+) -> RedosAnalysis:
+    """Repère un motif vulnérable au ReDoS, et le CONFIRME par une exécution chronométrée réelle.
+
+    En deux temps, et le premier ne suffit jamais seul :
+
+    1. **Structure.** Le motif est décomposé via l'arbre que `re` construit
+       lui-même en interne, à la recherche de trois formes connues pour
+       provoquer un retour arrière catastrophique : des quantificateurs
+       illimités imbriqués (`(a+)+`), une alternance ambiguë sous répétition
+       (`(a|aa)+`), ou deux quantificateurs illimités adjacents (`.*.*`).
+    2. **Confirmation.** Pour chaque forme repérée, une attaque est construite
+       à partir d'un caractère représentatif et **exécutée pour de vrai** dans
+       un processus séparé, avec un budget de temps strict. Un motif qui
+       *ressemble* à un cas classique mais ne l'est pas en pratique — certaines
+       alternances asymétriques comme `(a|ab)+` — est structurellement repéré
+       puis **innocenté** par la mesure, plutôt que signalé à tort.
+
+    `vulnerable` ne vaut jamais `true` sur la seule apparence du texte : il
+    faut qu'au moins un constat ait été confirmé par une exécution réelle.
+    Un motif dont `findings` contient des entrées mais `confirmed=false`
+    partout est une forme suspecte que ce moteur `re` précis ne rend pas
+    dangereuse — pas une alerte à ignorer aveuglément pour autant : un autre
+    moteur (PCRE, RE2 côté backend, JavaScript) peut réagir différemment au
+    même texte.
+    """
+    try:
+        constats = rd.analyser_statique(pattern)
+    except rd.RedosError as exc:
+        return RedosAnalysis(
+            pattern=pattern,
+            compiles=False,
+            compile_error=str(exc),
+            vulnerable=False,
+            note="Le motif ne compile pas dans le moteur `re` de Python : aucune analyse possible.",
+        )
+
+    if not constats:
+        return RedosAnalysis(
+            pattern=pattern,
+            compiles=True,
+            vulnerable=False,
+            note="Aucune forme structurellement associée au ReDoS n'a été repérée.",
+        )
+
+    a_confirmer = constats[:NOMBRE_CONFIRMATIONS_MAX]
+    boucle = asyncio.get_running_loop()
+    sondages = [
+        await boucle.run_in_executor(None, rd.confirmer, pattern, constat)
+        for constat in a_confirmer
+    ]
+
+    findings = [
+        RedosFinding(
+            kind=sondage.finding.kind,
+            sample=sondage.finding.sample,
+            explanation=sondage.finding.explanation,
+            confirmed=sondage.confirmed,
+            timeout_hit=sondage.timeout_hit,
+            timings_ms=[[float(n), d] for n, d in sondage.timings_ms],
+            note=sondage.note,
+        )
+        for sondage in sondages
+    ]
+    vulnerable = any(f.confirmed for f in findings)
+    tronque = len(constats) > len(a_confirmer)
+
+    if vulnerable:
+        note = (
+            "Au moins un constat est confirmé par une exécution réelle : ce motif est "
+            "vulnérable."
+        )
+    else:
+        note = (
+            "Forme(s) suspecte(s) repérée(s), mais aucune n'a été confirmée par une "
+            "exécution réelle sur ce moteur."
+        )
+    if tronque:
+        note += (
+            f" {len(constats) - len(a_confirmer)} autre(s) candidat(s) structurel(s) "
+            "n'ont pas été testés, pour borner le temps de réponse."
+        )
+
+    return RedosAnalysis(
+        pattern=pattern,
+        compiles=True,
+        findings=findings,
+        vulnerable=vulnerable,
+        truncated=tronque,
+        note=note,
     )

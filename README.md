@@ -6,7 +6,7 @@
 ![Licence](https://img.shields.io/badge/licence-MIT-lightgrey)
 
 **Une extension `.mcpb` à installer d'un double-clic**, qui donne à votre
-modèle IA 46 outils de sécurité en lecture seule. Un analyste pose sa question
+modèle IA 57 outils de sécurité en lecture seule. Un analyste pose sa question
 en français ; le modèle choisit les outils et rend une réponse fondée sur des
 données réelles.
 
@@ -20,21 +20,23 @@ Desktop, Cursor, ou tout autre client compatible.
 | `entra-secops-mcp` | Identité — journaux Microsoft Entra ID | 6 |
 | `threat-intel-mcp` | Renseignement — VirusTotal, AbuseIPDB, GreyNoise | 4 |
 | `email-security-mcp` | Messagerie — SPF, DKIM, DMARC, en-têtes | 5 |
-| `vuln-intel-mcp` | **Vulnérabilités** — NVD, CISA KEV, EPSS · *sans clé* | 9 |
-| `mitre-attack-mcp` | **MITRE ATT&CK** — corpus embarqué · *hors ligne* | 9 |
-| `detection-mcp` | **Détection** — indicateurs, Sigma, couverture · *hors ligne* | 7 |
-| `web-recon-mcp` | **Web & TLS** — connexion directe, DNS, transparence · *sans clé* | 6 |
+| `vuln-intel-mcp` | **Vulnérabilités** — NVD, CISA KEV, EPSS, CWE · *sans clé* | 11 |
+| `mitre-attack-mcp` | **MITRE ATT&CK** — corpus embarqué, D3FEND · *hors ligne* | 10 |
+| `detection-mcp` | **Détection** — indicateurs, Sigma, YARA, événements Windows/Sysmon, ReDoS · *hors ligne* | 11 |
+| `artefact-mcp` | **Artefacts** — jetons JWT, décodage en cascade · *hors ligne* | 2 |
+| `web-recon-mcp` | **Web & TLS** — TLS, DNS, RDAP/ASN, transparence · *sans clé* | 8 |
 | `argus-agent` | **Orchestration** — enchaîne les domaines | — |
 | `argus-eval` | **Évaluation** — 25 incidents de référence, seuils bloquants | — |
 
-**46 outils.** Trente-six ne demandent **aucune clé d'API** : NVD, le catalogue
+**57 outils.** Quarante-sept ne demandent **aucune clé d'API** : NVD, le catalogue
 CISA et EPSS sont publics, le corpus ATT&CK est embarqué, l'analyse des règles
 Sigma est purement locale, et l'inspection TLS ouvre sa propre connexion.
 
-**Dix-sept ne touchent pas au réseau du tout** — les neuf outils MITRE et les
-sept outils de détection, parce que le corpus et l'analyse sont locaux, plus le
-calcul CVSS. Un rapport de menace confidentiel ou une règle en cours d'écriture
-ne quittent jamais le poste.
+**Vingt-quatre ne touchent pas au réseau du tout** — les dix outils MITRE
+(ATT&CK et D3FEND), les onze de détection (Sigma, YARA, événements Windows/
+Sysmon, ReDoS), les deux d'analyse d'artefacts, et le calcul CVSS. Un rapport
+de menace confidentiel, un jeton, une règle en cours d'écriture : rien de tout
+cela ne quitte le poste.
 
 L'inspection TLS, DNS et en-têtes vise l'hôte **directement** plutôt que de
 passer par un service tiers : elle fonctionne donc aussi sur un hôte **interne**
@@ -49,6 +51,8 @@ quelques secondes une réponse fondée sur les données réelles du tenant.
 | 📦 **[INSTALLER.md](docs/INSTALLER.md)** | l'analyste qui reçoit l'extension, et qui la distribue |
 | 🎓 **[COMPRENDRE.md](docs/COMPRENDRE.md)** | tout le projet expliqué depuis zéro, sans prérequis |
 | 🔧 **[SETUP.md](docs/SETUP.md)** | qui modifie le code, lance les tests, construit l'extension |
+| 🔑 **[ENTRA.md](docs/ENTRA.md)** | qui branche ARGUS sur un vrai tenant : permissions au plus juste, licences, validation |
+| 🛡️ **[SECURITY.md](SECURITY.md)** | modèle de menace, signalement d'une faille, vérification d'un paquet reçu |
 | 🔍 **[RESEARCH.md](docs/RESEARCH.md)** | scan du marché et choix d'exposition sécurisée |
 
 ## Installation
@@ -75,7 +79,7 @@ double-clic, aucune ligne de commande.
 3. **Double-cliquer sur le fichier.** Claude Desktop propose l'installation.
 
 4. Ne rien remplir. Les six champs proposés sont **tous facultatifs** :
-   sans aucune clé, **36 outils fonctionnent immédiatement**.
+   sans aucune clé, **47 outils fonctionnent immédiatement**.
 
 > L'extension est **signée**, mais par un certificat auto-signé : l'hôte
 > affiche tout de même un avertissement à l'installation. C'est attendu pour une
@@ -139,7 +143,7 @@ n'est pas rattrapable une fois le port ouvert.
 
 ```
 $ argus-mcp --http --host 0.0.0.0
-  ✗ Refus de démarrer : l'écoute sur « 0.0.0.0 » exposerait 46 outils de
+  ✗ Refus de démarrer : l'écoute sur « 0.0.0.0 » exposerait 47 outils de
     sécurité sans authentification.
     Définissez ARGUS_HTTP_TOKEN (au moins 16 caractères), ou gardez
     l'écoute sur 127.0.0.1.
@@ -149,7 +153,7 @@ $ argus-mcp --http --host 0.0.0.0
 
 Au-delà de la boucle locale, le serveur **refuse de servir en clair**. Le jeton
 voyage dans un en-tête `Authorization` à chaque requête : sans chiffrement,
-quiconque observe le trafic le récupère, et obtient avec lui les 46 outils et
+quiconque observe le trafic le récupère, et obtient avec lui les 47 outils et
 les journaux du tenant.
 
 ```
@@ -486,6 +490,25 @@ silencieux de l'une d'elles.
 - **Servir des données périmées en silence.** Si le catalogue CISA n'a pas pu
   être rafraîchi, la version précédente est servie — et `catalog_stale` le dit.
 
+### `lookup_cwe` — un identifiant seul ne dit pas ce qu'il faut tester
+
+`lookup_cve` rend déjà les CWE cités par NVD, sous forme de simples chaînes.
+`lookup_cwe` les développe — et vérifie une chose qu'aucune fiche NVD ne
+vérifie elle-même : MITRE classe chaque CWE selon son **aptitude à désigner
+une vulnérabilité précise** (`Allowed`, `Discouraged`, `Prohibited`). Un CWE
+`Prohibited` cité sur une CVE réelle est un défaut de la fiche NVD, pas
+seulement une information de plus — le même principe que les techniques ATT&CK
+révoquées.
+
+```
+CWE-1041 — Use of Redundant Code
+  ! MITRE classe ce CWE « Prohibited » pour l'assignation à une vulnérabilité
+    précise : ce point est avant tout un problème de qualité, sans implication
+    directe de sécurité.
+```
+
+Entièrement local : le catalogue CWE (969 entrées) est embarqué.
+
 ---
 
 ## Le serveur MITRE ATT&CK
@@ -562,6 +585,23 @@ Un test vérifie désormais que **les 697 techniques portent leur détection**.
   qu'elle a été retirée et renvoie vers `T1685`.
 - **Rapprocher approximativement.** Un constat hors vocabulaire est listé dans
   `unmapped`. Une correspondance fausse est pire qu'une correspondance absente.
+
+### `suggest_countermeasures` — le contrepoint défensif MITRE D3FEND
+
+ATT&CK dit ce que fait un attaquant ; **D3FEND dit quoi construire** pour s'en
+défendre. À une technique, l'outil associe des contre-mesures **nommées**,
+classées par tactique défensive (Harden, Detect, Isolate, Deceive, Evict,
+Model, Restore) — pas un conseil générique.
+
+**Le piège traité explicitement**, constaté dans les données réelles de
+MITRE : D3FEND mappe très souvent des *sous-techniques*, presque jamais leur
+parente. `T1055.003` a des contre-mesures nommées, `T1055` seul n'en a
+directement aucune — alors que dix de ses sous-techniques en ont. Rendre
+« aucune contre-mesure » pour `T1055` serait un faux négatif ; l'outil
+retrouve celles des filles et le signale plutôt que de laisser deviner.
+
+Entièrement local : 326 techniques et 149 contre-mesures, distillées depuis
+les correspondances officielles publiées par MITRE.
 
 ---
 
@@ -674,7 +714,7 @@ données partielles qui ne le dirait pas serait trompeuse.
 detection-mcp --check         # vérifie la chaîne complète, sans réseau
 ```
 
-Sept outils, aucune clé, **aucun accès réseau**. C'est la propriété qui compte
+Huit outils, aucune clé, **aucun accès réseau**. C'est la propriété qui compte
 ici : un rapport de menace encore confidentiel, un courriel signalé par un
 utilisateur, une règle en cours d'écriture — rien ne quitte le poste.
 
@@ -728,6 +768,70 @@ soumettre révélerait la topologie du réseau.
 
 Chaque exclusion est **rendue avec son motif**. Les taire ferait croire à une
 extraction défaillante, et pousserait à recommencer à la main.
+
+### Le pendant fichier : `analyze_yara_rule`
+
+Deux bibliothèques de référence, pour la même raison que Sigma : `plyara` lit
+la structure, le compilateur officiel `yara-python` juge de la conformité.
+Un détail vérifié en les éprouvant plutôt que supposé, sur les deux : une
+règle vide **compile avec succès** dans le compilateur officiel, avec zéro
+règle réellement présente — s'y fier seul aurait validé un fichier qui ne
+contient rien.
+
+Ce qu'aucun compilateur ne vérifie, et que cet outil signale :
+
+- **Une chaîne texte courte sans `fullword`.** `$a = "cmd"` correspond à
+  l'intérieur de « command », « recmd.exe » — la cause la plus fréquente de
+  faux positifs en pratique.
+- **Une condition qui ne sélectionne rien** — `any of them` sur des chaînes
+  génériques, ou `true`, qui accepte tout ce qu'on lui présente.
+- **Les mêmes étiquettes ATT&CK révoquées ou incohérentes** que pour Sigma —
+  le corpus embarqué et la logique de rattachement sont partagés, pas
+  dupliqués.
+
+---
+
+## Le serveur d'analyse d'artefacts
+
+```bash
+artefact-mcp --check          # vérifie les deux chaînes, sans réseau
+```
+
+Deux outils, **aucun accès réseau**. Un jeton est un secret ; l'envoyer à un
+tiers pour l'analyser serait le divulguer. Une charge obfusquée peut être la
+pièce à conviction d'un incident en cours.
+
+### `analyze_jwt` — lire un jeton, sans prétendre le vérifier
+
+Vérifier une signature exige la clé de l'émetteur, que l'analyste n'a pas.
+`signature_verified` vaut **toujours faux** dans la réponse : le champ existe
+pour qu'on ne puisse pas l'oublier. Ce que l'outil audite, du plus grave au
+moins grave :
+
+```
+alg=none                       → « le jeton se déclare NON SIGNÉ »
+roles=[Directory.Read.All, …]  → « 2 permissions à portée large »
+aucune expiration (exp)        → « reste valable jusqu'à révocation de la clé »
+```
+
+### `decode_payload` — retirer les couches, sans les exécuter
+
+Devant `powershell -enc SQBFAFgA...`, l'extraction d'indicateurs ne voit rien :
+il n'y a rien à voir tant que la couche n'est pas retirée. L'outil les retire
+une à une — base64, hexadécimal, URL, gzip — jusqu'à obtenir du texte lisible,
+et **rend le chemin traversé**, pas seulement le résultat : un empilement de
+trois encodages caractérise l'outillage employé, là où une charge légitime en
+compte rarement plus d'un.
+
+```
+powershell -enc …   → [base64]                        → la commande en clair
+base64(gzip(...))   → [base64 → gzip]                  → le contenu, décompressé
+base64(MZ…)         → [base64]  « exécutable Windows (PE), ne l'exécutez pas »
+```
+
+Un décodage n'est retenu que s'il **améliore** la charge : un texte déjà en
+clair, même si son alphabet ressemble à du base64, n'est jamais « décodé » à
+tort en octets aléatoires.
 
 ---
 
@@ -861,16 +965,24 @@ Toutes les variables sont documentées dans [`.env.example`](.env.example).
 
 ## Développement
 
-Le dépôt sépare **deux zones**, et un test rend la frontière contraignante :
+Tout le dépôt sert l'extension `.mcpb` — mais pas de la même façon. Chaque
+zone a un rapport précis au paquet :
 
-| | |
-|---|---|
-| `src/` | **le produit** — les neuf paquets recopiés dans l'extension `.mcpb` |
-| `atelier/` | **hors paquet** — l'agent de triage et le harnais d'évaluation |
-| `mcpb/` | tout ce qui concerne l'extension : manifeste, outillage, artefact |
+| Zone | Son rapport à l'extension | Part dans le paquet ? |
+|---|---|---|
+| `src/` | **est** le paquet — les dix paquets recopiés dedans | oui |
+| `mcpb/` | **le fabrique** — manifeste, empaquetage, signature, vérification | non |
+| `scripts/` | **produit ce qu'il embarque** — corpus ATT&CK, CWE, D3FEND, événements Windows | non, leur sortie oui |
+| `tests/` | **prouve qu'il fonctionne** — 1006 tests | non |
+| `atelier/` | **valide que ses outils s'enchaînent**, sans modèle IA | non |
+| `docs/` | **l'explique** — installer, comprendre, modifier | non |
 
-Un module de `src/` qui importerait `atelier/` passerait tous les tests ici et
-planterait chez l'analyste, dont le `.mcpb` ne contient pas `atelier/`.
+Une seule zone part chez le destinataire. Les autres existent pour qu'elle soit
+juste.
+
+Cette frontière est **vérifiée**, pas seulement énoncée : un module de `src/`
+qui importerait `atelier/` passerait tous les tests ici et planterait chez
+l'analyste, sur une machine où `atelier/` n'existe pas.
 `tests/test_frontiere_paquet.py` interdit ce cas.
 
 ```bash
@@ -887,12 +999,12 @@ python mcpb/outils/construire.py    # extension, construite ET vérifiée
 
 | | |
 |---|---|
-| Outils | 46 au total, tous en lecture seule ; 36 sans aucune clé d'API |
-| Hors ligne | 17 outils ne touchent pas au réseau : ATT&CK, détection, calcul CVSS |
-| Tests | 661, sans clé ni tenant requis |
+| Outils | 54 au total, tous en lecture seule ; 44 sans aucune clé d'API |
+| Hors ligne | 21 outils ne touchent pas au réseau : ATT&CK, D3FEND, Sigma, YARA, JWT, décodage, calcul CVSS |
+| Tests | 939, sans clé ni tenant requis |
 | Types | `mypy --strict` sans alerte |
 | Protocole MCP | `2026-07-28` (SDK `mcp` 2.0) |
-| Distribution | extension `.mcpb` de 678 Ko — construite, **dépaquetée et exécutée** par la CI |
+| Distribution | extension `.mcpb` de 947 Ko — construite, **dépaquetée et exécutée** par la CI |
 | Transports | stdio (défaut, surface réseau nulle) et Streamable HTTP — jeton et TLS exigés hors de la machine |
 | Version | une seule, `argus_net.VERSION`, vérifiée dans le projet, le paquet et chaque serveur |
 

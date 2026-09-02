@@ -16,7 +16,7 @@ Le brief technique du projet écarte explicitement cette piste.
 Trois protections, dont deux que ce module rend impossibles à oublier :
 
 1. **Écoute sur la boucle locale par défaut.** Un port ouvert sur toutes les
-   interfaces expose 46 outils de sécurité, et les identifiants de tenant qui
+   interfaces expose 47 outils de sécurité, et les identifiants de tenant qui
    vont avec, à quiconque atteint la machine.
 2. **Validation de l'en-tête `Origin`.** Sans elle, une page web visitée par
    l'analyste peut piloter son serveur local — c'est l'attaque par
@@ -110,7 +110,7 @@ def resoudre_jeton(hote: str, jeton: str | None) -> str | None:
     if not valeur:
         if not local:
             raise ConfigurationHttpError(
-                f"Refus de démarrer : l'écoute sur « {hote} » exposerait 46 outils de "
+                f"Refus de démarrer : l'écoute sur « {hote} » exposerait 47 outils de "
                 f"sécurité sans authentification.\n"
                 f"  Définissez {VARIABLE_JETON} (au moins {LONGUEUR_MINIMALE} caractères), "
                 f"ou gardez l'écoute sur 127.0.0.1."
@@ -138,7 +138,7 @@ def exiger_chiffrement(hote: str, *, tls_local: bool, tls_en_amont: bool) -> Non
     **Pourquoi c'est un refus et non un avertissement.** Le jeton
     d'authentification voyage dans un en-tête `Authorization`. Sans TLS, il
     traverse le réseau en clair à *chaque* requête : quiconque observe le
-    trafic le récupère, et obtient les 46 outils, les journaux du tenant et les
+    trafic le récupère, et obtient les 47 outils, les journaux du tenant et les
     clés de réputation qui vont avec. Un avertissement au démarrage défile et
     disparaît ; le refus, non.
 

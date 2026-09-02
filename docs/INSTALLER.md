@@ -1,7 +1,7 @@
 # Installer et distribuer ARGUS
 
-ARGUS est **une extension `.mcpb`** : un fichier de 678 Ko qui donne à un modèle
-IA 46 outils de sécurité en lecture seule.
+ARGUS est **une extension `.mcpb`** : un fichier de 947 Ko qui donne à un modèle
+IA 57 outils de sécurité en lecture seule.
 
 Ce document couvre les trois façons de le mettre entre les mains de quelqu'un —
 selon le client qu'il utilise, et selon qu'il travaille seul ou en équipe.
@@ -50,14 +50,14 @@ curl -LsSf https://astral.sh/uv/install.sh | sh
 Puis **double-cliquer sur le `.mcpb`**. Claude Desktop propose l'installation et
 affiche les champs de configuration.
 
-C'est `uv` qui permet à un seul fichier de 678 Ko de fonctionner sur Windows,
+C'est `uv` qui permet à un seul fichier de 947 Ko de fonctionner sur Windows,
 macOS et Linux : embarquer les dépendances donnerait un paquet **par plateforme
 et par version de Python**, puisque `cryptography` et `pydantic-core` sont
 compilés.
 
 ### Ce que le destinataire obtient
 
-**36 outils immédiatement, sans aucune clé.** Les six champs proposés sont
+**47 outils immédiatement, sans aucune clé.** Les six champs proposés sont
 **tous facultatifs** — ne rien remplir suffit.
 
 | Champ | Débloque |
@@ -95,6 +95,23 @@ interne — jamais dans la même archive.
 > exception comme une absence de signature. **Aucune** signature ne peut être
 > confirmée par cet outil aujourd'hui. `signer.py` contrôle donc le bloc
 > lui-même et affiche par quel certificat le paquet est signé.
+
+### Si l'installation échoue sur « Failed to preview extension »
+
+```
+Failed to preview extension: Invalid comment length. Expected: N. Found: 0.
+```
+
+Le double-clic n'atteint même pas l'étape d'installation : Claude Desktop
+refuse d'ouvrir le fichier. La cause est une extension **signée avec une
+version de `signer.py` antérieure au correctif de l'EOCD** — voir
+[`mcpb/README.md`](../mcpb/README.md#failed-to-preview-extension--invalid-comment-length)
+pour le détail technique. Reconstruisez et signez à nouveau :
+
+```bash
+python mcpb/outils/construire.py
+python mcpb/outils/signer.py
+```
 
 ### Si l'installation échoue sur « Server disconnected »
 
@@ -160,23 +177,24 @@ Décompressez le `.mcpb` quelque part — c'est une archive ZIP — puis visez-l
 > Ces emplacements changent d'une version à l'autre. En cas de doute, cherchez
 > « MCP » dans les réglages du client : la structure JSON, elle, ne change pas.
 
-### Un seul domaine, plutôt que les 46 outils
+### Un seul domaine, plutôt que les 57 outils
 
 `argus_bundle` réunit tout. Pour n'exposer qu'un domaine, visez son module :
 
 ```
--m vuln_intel_mcp     9 outils   vulnérabilités
--m mitre_mcp          9 outils   ATT&CK, sans réseau
--m detection_mcp      7 outils   indicateurs, Sigma, sans réseau
--m web_recon_mcp      6 outils   TLS, DNS, certificats
+-m vuln_intel_mcp     11 outils  vulnérabilités, CWE
+-m mitre_mcp          10 outils  ATT&CK, D3FEND, sans réseau
+-m detection_mcp      11 outils  indicateurs, Sigma/YARA, événements Windows/Sysmon, ReDoS, sans réseau
+-m artefact_mcp       2 outils   JWT, décodage, sans réseau
+-m web_recon_mcp      8 outils   TLS, DNS, RDAP/ASN, certificats
 -m email_security_mcp 5 outils   SPF, DKIM, DMARC
 -m threat_intel_mcp   4 outils   réputation (clés requises)
 -m entra_secops_mcp   6 outils   identité (tenant requis)
 ```
 
 Ce n'est pas une question de goût : **les définitions d'outils partent au modèle
-à chaque message**. Quarante-six outils coûtent plusieurs milliers de jetons par
-question, avant même la question. Sur un poste dédié à la veille
+à chaque message**. Cinquante-sept outils coûtent plusieurs milliers de
+jetons par question, avant même la question. Sur un poste dédié à la veille
 vulnérabilités, `vuln_intel_mcp` seul revient bien moins cher.
 
 ---
@@ -280,12 +298,12 @@ lance.
 1 · Synchroniser le code embarqué
   ✓ mcpb/src est identique à src/
 2 · Générer le manifeste
-  ✓ 46 outils déclarés par le serveur lui-même
+  ✓ 57 outils déclarés par le serveur lui-même
 3 · Empaqueter
-  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (678 Ko)
+  ✓ mcpb/dist/argus-secops-1.0.0.mcpb (947 Ko)
 4 · Vérifier l'artefact
-  ✓ exécuté depuis une copie dépaquetée — 36 outils exposés.
-  ✓ 113 fichiers, aucun artefact de construction embarqué
+  ✓ exécuté depuis une copie dépaquetée — 47 outils exposés.
+  ✓ 130 fichiers, aucun artefact de construction embarqué
 ```
 
 ### Pourquoi la synchronisation est vérifiée

@@ -9,11 +9,15 @@ from argus_net import VERSION
 
 from .tools import (
     analyze_sigma_rule,
+    analyze_yara_rule,
     check_detection_coverage,
+    check_redos,
     convert_sigma_rule,
     defang_iocs,
     explain_sigma_rule,
     extract_iocs,
+    lookup_windows_event,
+    search_windows_events,
     suggest_detection_for_technique,
 )
 
@@ -31,6 +35,10 @@ Quel outil pour quelle question :
   « Où sont nos angles morts ? »                → check_detection_coverage
   « On veut couvrir T1566, on fait quoi ? »     → suggest_detection_for_technique
   « Comment partager ces indicateurs ? »        → defang_iocs
+  « Cette règle YARA est-elle bonne ? »          → analyze_yara_rule
+  « Que veut dire l'ID d'événement 4688 ? »     → lookup_windows_event
+  « Quel événement repère un ajout à un groupe ? » → search_windows_events
+  « Cette regex peut-elle planter le moteur ? » → check_redos
 
 CE QUI EST CALCULÉ, PAS DÉDUIT
 
@@ -47,6 +55,13 @@ CE QUE CES OUTILS REFUSENT DE FAIRE
   · Livrer une règle prête à déployer. Les squelettes et les conversions sont
     des points de départ : les noms de champs dépendent du schéma de collecte
     local, qu'aucun outil ne peut deviner.
+  · Attribuer une criticité aux événements Sysmon. Microsoft n'en publie pas
+    pour ces IDs — l'intérêt réel dépend de la configuration déployée. Seuls
+    les événements d'audit de sécurité natif (Appendix L) en portent une.
+  · Déclarer un motif « vulnérable » au ReDoS sur la seule apparence du texte.
+    `check_redos` ne confirme que ce qu'une exécution chronométrée réelle a
+    démontré — une forme suspecte non confirmée reste rendue, mais jamais
+    comme un verdict.
 
 DONNÉES HOSTILES
 
@@ -68,11 +83,15 @@ LOCAL = ToolAnnotations(
 TOOLS = (
     extract_iocs,
     analyze_sigma_rule,
+    analyze_yara_rule,
     explain_sigma_rule,
     convert_sigma_rule,
     check_detection_coverage,
     suggest_detection_for_technique,
     defang_iocs,
+    lookup_windows_event,
+    search_windows_events,
+    check_redos,
 )
 
 

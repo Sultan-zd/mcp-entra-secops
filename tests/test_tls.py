@@ -177,7 +177,7 @@ def test_servir_en_clair_au_dela_de_la_machine_est_refuse(hote: str) -> None:
     """Le jeton voyage dans un en-tête à chaque requête.
 
     Sans TLS, quiconque observe le trafic le récupère — et obtient avec lui les
-    46 outils, les journaux du tenant et les clés de réputation.
+    50 outils, les journaux du tenant et les clés de réputation.
     """
     with pytest.raises(ConfigurationHttpError) as erreur:
         exiger_chiffrement(hote, tls_local=False, tls_en_amont=False)
@@ -345,4 +345,4 @@ def test_les_outils_sont_servis_a_travers_tls(serveur_tls: dict[str, object]) ->
             outils = json.loads(ligne[6:])["result"]["tools"]
             break
 
-    assert len(outils) == 36
+    assert len(outils) == 47
